@@ -279,7 +279,7 @@ def table_cons(in_mwk_to_usd_exchange_rate,
         if in_co_pkg_name == 'Implant':
             return 'implant'
         if in_co_pkg_name == 'Female sterilization':
-            return 'female_sterilization'
+            return 'other_modern'
         if in_co_pkg_name == 'Contraception initiation':
             return 'contraception initiation'
         else:
@@ -296,6 +296,7 @@ def table_cons(in_mwk_to_usd_exchange_rate,
     writer = pd.ExcelWriter(output_table_file)
     co_pkgs_df.to_excel(writer, index=False)
 
-    writer.save()
+    #writer.save()
+    writer.close()
     # TODO: finish? (the boarders, header align left, make the expected units to be nmbs so they are aligned right,
     #  write down the unique contraception package just once)

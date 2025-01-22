@@ -51,7 +51,7 @@ class RunAnalysisCo(BaseScenario):
             start_date=Date(2010, 1, 1),
             #end_date=Date(2099, 12, 31),
             end_date=Date(2030, 12, 31),
-            initial_population_size=10000,  # selected size for the Tim C at al. 2023 paper: 250K
+            initial_population_size=1000,  # selected size for the Tim C at al. 2023 paper: 250K
             number_of_draws=1,  # <- one scenario
             runs_per_draw=1,  # <- repeated this many times
         )
@@ -73,7 +73,7 @@ class RunAnalysisCo(BaseScenario):
             #demography.Demography(resourcefilepath=self.resources),
             demo_nuhdss.Demography(resourcefilepath=self.resources),
             #healthsystem.HealthSystem(resourcefilepath=self.resources,
-          #                           cons_availability="all"),
+             #                         cons_availability="all"),
 
             # - Contraception and replacement for Labour etc.
             contraception_demo_nuhdss.Contraception(resourcefilepath=self.resources,

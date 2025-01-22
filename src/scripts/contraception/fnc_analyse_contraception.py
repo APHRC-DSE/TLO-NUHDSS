@@ -23,9 +23,9 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
                           in_plot_use_time_method_bool: bool = False,
                           in_plot_pregnancies_bool: bool = False,
                           in_plot_depend_ratio_bool: bool = False,
-                          in_set_ylims_bool: bool = False, in_ylims_l: list = [],
+                          in_set_ylims_bool: bool = True, in_ylims_l: list = [1,1,1],
                           in_contraceptives_order: list = ['pill', 'IUD', 'injections', 'implant', 'male_condom',
-                                                           'female_sterilization', 'other_modern'],
+                                                           'rhythm', 'other_modern'],
                           in_calc_use_costs_bool: bool = False, in_required_time_period_starts: list = [],
                           in_calc_intervention_costs_bool: bool = False,
                           in_use_output: str = "mean"
@@ -87,8 +87,15 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
     # Load without simulating again - parse the simulation logfile to get the
     # output dataframes
     log_df = parse_log_file('outputs/' + in_log_file, level=logging.DEBUG)
+    print("log dataframe" ,log_df)
+    if 'tlo.methods.contraception' in log_df:
+        print(log_df['tlo.methods.contraception'].keys())
+    else:
+        print("Key 'tlo.methods.contraception' not found in log_df.")
+        
     # last year simulated
-    co_sum_df = log_df['tlo.methods.contraception']['contraception_use_summary'].copy()
+    #co_sum_df = log_df['tlo.methods.contraception']['contraception_use_summary'].copy()
+    co_sum_df = log_df['tlo.methods.contraception_demo_nuhdss']['contraception_use_summary'].copy()
     co_sum_df['year'] = co_sum_df['date'].dt.year
     last_year_simulated = co_sum_df.loc[co_sum_df.shape[0] - 1, 'year']
     last_day_simulated = co_sum_df.loc[co_sum_df.shape[0] - 1, 'date']
@@ -114,7 +121,7 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
     if in_plot_use_time_bool or in_plot_use_time_method_bool or in_plot_pregnancies_bool:
 
         # Load Model Results
-        co_df = log_df['tlo.methods.contraception']['contraception_use_summary'].set_index('date').copy()
+        co_df = log_df['tlo.methods.contraception_demo_nuhdss']['contraception_use_summary'].set_index('date').copy()
         model_months = pd.to_datetime(co_df.index)
         # Keep only data up to 2050
         if (model_months.year[-1]) > 2050:
@@ -179,10 +186,10 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
             Model_injections = co_df.injections[0:len(plot_months)]
             Model_implant = co_df.implant[0:len(plot_months)]
             Model_male_condom = co_df.male_condom[0:len(plot_months)]
-            Model_female_sterilization = co_df.female_sterilization[0:len(plot_months)]
+            #Model_female_sterilization = co_df.female_sterilization[0:len(plot_months)]
             Model_other_modern = co_df.other_modern[0:len(plot_months)]
-            Model_periodic_abstinence = co_df.periodic_abstinence[0:len(plot_months)]
-            Model_withdrawal = co_df.withdrawal[0:len(plot_months)]
+            Model_rhythm = co_df.rhythm[0:len(plot_months)]
+            #Model_withdrawal = co_df.withdrawal[0:len(plot_months)]
             Model_other_traditional = co_df.other_traditional[0:len(plot_months)]
 
             # TODO: add comments with names of the colours
@@ -211,21 +218,21 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
                     ls=line_style)
             ax.plot(np.asarray(plot_months), Model_male_condom * scaling_factor, color=colours_all_meths[4],
                     ls=line_style)
-            ax.plot(np.asarray(plot_months), Model_female_sterilization * scaling_factor, color=colours_all_meths[5],
-                    ls=line_style)
+            # ax.plot(np.asarray(plot_months), Model_female_sterilization * scaling_factor, color=colours_all_meths[5],
+            #         ls=line_style)
             ax.plot(np.asarray(plot_months), Model_other_modern * scaling_factor, color=colours_all_meths[6],
                     ls=line_style)
-            ax.plot(np.asarray(plot_months), Model_periodic_abstinence * scaling_factor, color=colours_all_meths[7],
+            ax.plot(np.asarray(plot_months), Model_rhythm * scaling_factor, color=colours_all_meths[7],
                     ls=line_style)
-            ax.plot(np.asarray(plot_months), Model_withdrawal * scaling_factor, color=colours_all_meths[8],
-                    ls=line_style)
+            # ax.plot(np.asarray(plot_months), Model_withdrawal * scaling_factor, color=colours_all_meths[8],
+            #         ls=line_style)
             ax.plot(np.asarray(plot_months), Model_other_traditional * scaling_factor, color=colours_all_meths[9],
                     ls=line_style)
             plt.axvline(x=Date(2023, 1, 1), ls=ls_start_interv, color='gray', label='interventions start')
             if in_set_ylims_bool:
                 ax.set_ylim([0, in_ylims_l[2]])
             contraceptives_order_all_meths = in_contraceptives_order +\
-                ['periodic_abstinence', 'withdrawal', 'other_traditional']
+                ['rhythm','other_traditional']
             # TODO: make the order of non-modern methods as input parameter
             #  (then join ordered modern & non-modern methods)
             plt.title("Contraception Use By Method")
@@ -246,30 +253,31 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
                            )
                 return _x.groupby(_x.index).mean().stack()
 
-            if in_log_file == 'run_analysis_contraception_no_diseases__2023-05-06T170512.log':
+            if in_log_file == 'run_analysis_contraception_no_diseases__2025-01-22T153209.log':
                 # without interv, 250K till 2050; final costs update EHP & OHT + rebased on master
                 # + pregn test corrected
-                results_folder_name = 'run_analysis_contraception_no_diseases-2023-05-06T170253Z'
-            elif in_log_file == 'run_analysis_contraception_no_diseases__2023-05-06T170612.log':
-                # with interv, 250K till 2050; final costs update EHP & OHT + rebased on master + pregn test corrected
-                results_folder_name = 'run_analysis_contraception_no_diseases-2023-05-06T170359Z'
-            elif in_log_file == 'run_analysis_contraception_no_diseases__2023-04-26T141435.log':
-                # without interv, 2K till 2099, final costs update EHP & OHT + pregn test to initiate co
-                results_folder_name = 'run_analysis_contraception_no_diseases-2023-04-26T141159Z'
-            elif in_log_file == 'run_analysis_contraception_no_diseases__2023-04-26T141545.log':
-                # with interv, 2K till 2099, final costs update EHP & OHT + pregn test to initiate co
-                results_folder_name = 'run_analysis_contraception_no_diseases-2023-04-26T141321ZZ'
+                results_folder_name = 'run_analysis_contraception_no_diseases-2025-01-22T123209Z'
+            # elif in_log_file == 'run_analysis_contraception_no_diseases__2023-05-06T170612.log':
+            #     # with interv, 250K till 2050; final costs update EHP & OHT + rebased on master + pregn test corrected
+            #     results_folder_name = 'run_analysis_contraception_no_diseases-2023-05-06T170359Z'
+            # elif in_log_file == 'run_analysis_contraception_no_diseases__2023-04-26T141435.log':
+            #     # without interv, 2K till 2099, final costs update EHP & OHT + pregn test to initiate co
+            #     results_folder_name = 'run_analysis_contraception_no_diseases-2023-04-26T141159Z'
+            # elif in_log_file == 'run_analysis_contraception_no_diseases__2023-04-26T141545.log':
+            #     # with interv, 2K till 2099, final costs update EHP & OHT + pregn test to initiate co
+            #     results_folder_name = 'run_analysis_contraception_no_diseases-2023-04-26T141321ZZ'
             else:
                 raise ValueError(
                     "Unknown results_folder_name for the log file " + str(in_log_file) +
                     ". Needs to be defined in the code for Figs: Contraception Use By Method Over time."
                 )
-            results_folder = Path('./outputs/sejjej5@ucl.ac.uk/' + results_folder_name)
+            #results_folder = Path('./outputs/sejjej5@ucl.ac.uk/' + results_folder_name)
+            results_folder = Path('./outputs/' + results_folder_name)
             # TODO: make the whole analysis to take the results from the folder
             #  (hence no need of extracting the log file)
 
             mean_usage = summarize(extract_results(results_folder,
-                                                   module="tlo.methods.contraception",
+                                                   module="tlo.methods.contraception_demo_nuhdss",
                                                    key="contraception_use_summary",
                                                    custom_generate_series=get_annual_mean_usage,
                                                    do_scaling=False),
