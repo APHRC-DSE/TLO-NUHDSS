@@ -65,7 +65,7 @@ def age_at_date(
     # Assume a fixed number of days in all years, ignoring variations due to leap years
     return (date - date_of_birth) / pd.Timedelta(days=DAYS_IN_YEAR)
 
-class Demography(Module):
+class DemographySlums(Module):
     """
     The core demography module.
     """
@@ -141,10 +141,7 @@ class Demography(Module):
         self.load_parameters_from_dataframe(pd.read_csv(
             Path(self.resourcefilepath) / 'demography' / 'ResourceFile_Demography_parameters.csv')
         )
-        #  # Initial population size:
-        # self.parameters['pop_2015'] = pd.read_csv(
-        #     Path(self.resourcefilepath) / 'demography' / 'pop_2015.csv'
-        # )
+        
         # Initial population size:
         self.parameters['pop_2015'] = pd.read_csv(
             Path(self.resourcefilepath) / 'demography' / 'ResourceFile_Population_nuhdss_2015.csv'
@@ -453,13 +450,10 @@ class DemographyLoggingEvent(RegularEvent, PopulationScopeEventMixin):
 
         # (nb. if you groupby both sex and age_range, you weirdly lose categories where size==0, so
         # get the counts separately.)
-        #m_age_counts = df[df.is_alive & (df.sex == 'M')].groupby('age_range').size()
-        #f_age_counts = df[df.is_alive & (df.sex == 'F')].groupby('age_range').size()
+        m_age_counts = df[df.is_alive & (df.sex == 'M')].groupby('age_range').size()
+        f_age_counts = df[df.is_alive & (df.sex == 'F')].groupby('age_range').size()
 
-        # Get the counts separately
-        m_age_counts = df[df.sex == 'M'].groupby('age_range').size()
-        f_age_counts = df[df.sex == 'F'].groupby('age_range').size()
-
+        
         logger.info(key='age_range_m', data=m_age_counts.to_dict())
 
         logger.info(key='age_range_f', data=f_age_counts.to_dict())

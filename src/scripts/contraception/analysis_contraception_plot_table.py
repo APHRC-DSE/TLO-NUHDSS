@@ -35,7 +35,7 @@ All the options can be set in the # TO SET # section below.
 import time
 from pathlib import Path
 
-import fnc_analyse_contraception as a_co
+import function_run_analysis_nuhdss as a_co
 import numpy as np
 import pandas as pd
 import tables
@@ -55,13 +55,13 @@ branch_name = 'co_final'
 # 250K till 2050; final costs update EHP & OHT + rebased on master + pregn test corrected: '2023-05-06T170512'
 #    from 2023-05-06T170253Z
 # # - With interv
-datestamp_with_log = '2025-01-22T153209'
+datestamp_with_log = '2025-01-27T182514'
 # 2K till 2099, final costs update EHP & OHT + pregn test to initiate co: '2023-04-26T141545' from 2023-04-26T141321Z
 #datestamp_without_log = '2025-01-22T123209Z'
 # 250K till 2050; final costs update EHP & OHT + rebased on master + pregn test corrected: '2023-05-06T170612'
 #    from 2023-05-06T170359Z
 #logFile_without = 'run_analysis_contraception_no_diseases__' + datestamp_without_log + '.log'
-logFile_with = 'run_analysis_contraception_no_diseases__' + datestamp_with_log + '.log'
+logFile_with = 'run_analysis_nuhdss__' + datestamp_with_log + '.log'
 ##
 # OUTPUT REQUIREMENTS
 # %%%% plots up to the year 2050 (regarding of how long are the simulations)
@@ -79,10 +79,10 @@ plot_pregnancies_bool = True
 # plot_depend_ratio_bool = False
 plot_depend_ratio_bool = False
 # %% Do you want to set the upper limits for the y-axes for the 3 plots above?
-set_ylims_bool = True
+set_ylims_bool = False
 # If the above is True (otherwise it doesn't matter),
 # upper limits for the figures (in the order [Use, Props of Use, Use By Method, Pregnancies, Props of Pregnancies ]
-ylims_l = [1.08e7, 0.88, 3.6e6, 1.37e6, 0.019, 1]
+#ylims_l = [1, 0.88, 3.6e6, 1.37e6, 0.019, 1]
 #
 # %%%% table
 # %% Run analysis? If the dataframes from the analysis are not prepared yet, then run the analysis.
