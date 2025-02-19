@@ -221,7 +221,7 @@ class DemographySlums(Module):
        
         df.is_alive.values[:] = True
         df.loc[df.is_alive, 'date_of_birth'] = demog_char_to_assign['date_of_birth']
-        df.loc[df.is_alive, 'date_of_death'] = pd.NaT
+        #df.loc[df.is_alive, 'date_of_death'] = pd.NaT
         #df.loc[df.is_alive, 'cause_of_death'] = np.nan
         df.loc[df.is_alive, 'sex'] = demog_char_to_assign['Sex']
         df.loc[df.is_alive, 'mother_id'] = DEFAULT_MOTHER_ID  # Motherless, and their characterists are not inherited
@@ -291,7 +291,7 @@ class DemographySlums(Module):
         child = {
             'is_alive': True,
             'date_of_birth': self.sim.date,
-            'date_of_death': pd.NaT,
+            #'date_of_death': pd.NaT,
             'sex': 'M' if rng.random_sample() < fraction_of_births_male else 'F',
             'mother_id': mother_id,
             'slum_num_of_residence': _slum_num_of_residence,
@@ -397,6 +397,8 @@ class DemographySlums(Module):
 
         :returns: Ratio of ``initial_population`` to 2010 baseline population.
         """
+        print("slum pupulation", self.parameters['pop_2015']['Count'].sum())
+
         return initial_population_size / self.parameters['pop_2015']['Count'].sum()
 
 
@@ -453,8 +455,13 @@ class DemographyLoggingEvent(RegularEvent, PopulationScopeEventMixin):
         m_age_counts = df[df.is_alive & (df.sex == 'M')].groupby('age_range').size()
         f_age_counts = df[df.is_alive & (df.sex == 'F')].groupby('age_range').size()
 
+        # logger.info(
+        #     key='demography_nuhdss',
+        #     data={'age_range_f': f_age_counts,
+        #           'age_range_m': m_age_counts
+        #           })
         
-        logger.info(key='age_range_m', data=m_age_counts.to_dict())
+        logger.info( key='age_range_m', data=m_age_counts.to_dict())
 
         logger.info(key='age_range_f', data=f_age_counts.to_dict())
 

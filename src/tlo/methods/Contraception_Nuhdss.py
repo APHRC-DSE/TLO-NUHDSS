@@ -210,6 +210,7 @@ class ContraceptionSlums(Module):
 
         # Import 2015 pop and count numbs of women 15-49 & 30-49
         pop_2015 = self.sim.modules["DemographySlums"].parameters["pop_2015"]
+        print("pop_2015 are", pop_2015)
         n_females_aged_15_to_49_in_2015 = pop_2015[
             (pop_2015.Sex == "F") & (pop_2015.Age >= 15) & (pop_2015.Age <= 49)
         ].Count.sum()
@@ -239,7 +240,6 @@ class ContraceptionSlums(Module):
 
         # 2) Assign contraception method
         # Select females aged 15-49 from population, for current year
-        #females1549 = df.is_alive & (df.sex == 'F') & df.age_years.between(15, 49)
         females1549 = df.is_alive & (df.sex == 'F') & df.age_years.between(15, 49)
         p_method = self.processed_params['initial_method_use']
         df.loc[females1549, 'co_contraception'] = df.loc[females1549, 'age_years'].apply(
@@ -407,11 +407,11 @@ class ContraceptionSlums(Module):
                         "Index mismatch after processing!"
                     assert (p_init_this_year_df >= 0.0).all().all(), \
                         "Negative probabilities detected!"
-
+                    
                     p_init[year] = p_init_this_year_df
-
+                    print("probability of initiationp", p_init[year])
                 return p_init
-
+            
         
             return apply_age_year_effects(p_init_by_method)
         
@@ -462,7 +462,7 @@ class ContraceptionSlums(Module):
                 assert (p_stop_this_year_df >= 0.0).all().all()
 
                 p_stop[year] = p_stop_this_year_df
-
+                print("probability of stopping", p_stop[year])
             return p_stop
 
         def time_age_trend_in_initiation():
@@ -639,7 +639,7 @@ class ContraceptionSlums(Module):
         # Check if the probabilities sum to 1
         total_prob = sum(probs_all.values)
         if total_prob != 1:
-            print(f"Warning: Probabilities do not sum to 1. They sum to {total_prob}. Normalizing...")
+            #print(f"Warning: Probabilities do not sum to 1. They sum to {total_prob}. Normalizing...")
             # Normalize the probabilities
             probs_all = probs_all / total_prob  # This will ensure the probabilities sum to 1
         
@@ -817,7 +817,7 @@ class ContraceptionPoll(RegularEvent, PopulationScopeEventMixin):
                              ~df.is_pregnant)
 
         currently_using_co = df.index[possible_co_users &
-                                      ~df.co_contraception.isin(['not_using', 'female_sterilization'])]
+                                      (df.co_contraception != "not_using")]
         currently_not_using_co = df.index[possible_co_users & (df.co_contraception == 'not_using')]
 
         # initiating: not using -> using

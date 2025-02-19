@@ -49,19 +49,19 @@ pop_size_simulated = "10k"
 branch_name = 'co_final'
 # which results to use
 # - Without interv
-# datestamp_without_log = '2023-04-26T141435'
+datestamp_without_log = '2025-01-28T101016'
 # 2K till 2099, final costs update EHP & OHT + pregn test to initiate co: '2023-04-26T141435' from 2023-04-26T141159Z
 #datestamp_without_log = '2025-01-22T140358'
 # 250K till 2050; final costs update EHP & OHT + rebased on master + pregn test corrected: '2023-05-06T170512'
 #    from 2023-05-06T170253Z
 # # - With interv
-datestamp_with_log = '2025-01-27T182514'
+#datestamp_with_log = '2025-01-27T182514'
 # 2K till 2099, final costs update EHP & OHT + pregn test to initiate co: '2023-04-26T141545' from 2023-04-26T141321Z
 #datestamp_without_log = '2025-01-22T123209Z'
 # 250K till 2050; final costs update EHP & OHT + rebased on master + pregn test corrected: '2023-05-06T170612'
 #    from 2023-05-06T170359Z
-#logFile_without = 'run_analysis_contraception_no_diseases__' + datestamp_without_log + '.log'
-logFile_with = 'run_analysis_nuhdss__' + datestamp_with_log + '.log'
+logFile_without = 'run_analysis_nuhdss__' + datestamp_without_log + '.log'
+#logFile_with = 'run_analysis_nuhdss__' + datestamp_with_log + '.log'
 ##
 # OUTPUT REQUIREMENTS
 # %%%% plots up to the year 2050 (regarding of how long are the simulations)
@@ -77,7 +77,7 @@ plot_use_time_method_bool = True
 plot_pregnancies_bool = True
 # %% Plot Dependency Ratio Over time?
 # plot_depend_ratio_bool = False
-plot_depend_ratio_bool = False
+plot_depend_ratio_bool = True
 # %% Do you want to set the upper limits for the y-axes for the 3 plots above?
 set_ylims_bool = False
 # If the above is True (otherwise it doesn't matter),
@@ -89,7 +89,7 @@ set_ylims_bool = False
 # Otherwise, the saved dataframes will be used to create table and costs fig.
 # TODO: Later also the other figs can be prepared outside the analysis script
 # run_analysis = False
-run_analysis = False
+run_analysis = True
 # %% Table the Use and Costs (By Method) Over time?
 # table_use_costs_bool = False
 table_use_costs_bool = False
@@ -113,7 +113,8 @@ calc_intervention_costs_bool = False
 # %% Round the number of women using contraception? No => None, Yes => set to nearest what to round them
 # (e.g. to nearest thousands => 1e3).
 # TODO: test whether None in following 3 pars works
-rounding_use_to = 1e3
+rounding_use_to = None
+#rounding_use_to = 1e3
 # %% Round the costs in MWK? No => None, Yes => set to nearest what to round them.
 rounding_costs_mwk_to = 1e6
 # %% Round the costs in USD? No => None, Yes => set to nearest what to round them.
@@ -122,8 +123,8 @@ rounding_costs_usd_to = rounding_costs_mwk_to / 1000
 # %%%% Parameters only for test runs (for final runs set them as True-True-False-True)
 # # Do you want to do both analysis? If not (set one of the below to False). The analysis won't be done and the outputs
 # from the other analysis (set to True below) will be used instead.
-do_no_interv_analysis = False
-do_interv_analysis = True
+do_no_interv_analysis = True
+#do_interv_analysis = True
 # %% Plot Consumables & Intervention Costs Over Time from the Table?
 plot_costs = False
 #plot_costs = True

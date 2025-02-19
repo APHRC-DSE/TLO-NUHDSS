@@ -88,14 +88,10 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
     # output dataframes
     log_df = parse_log_file('outputs/' + in_log_file, level=logging.DEBUG)
     print("log dataframe" ,log_df)
-    if 'tlo.methods.contraception' in log_df:
-        print(log_df['tlo.methods.contraception'].keys())
-    else:
-        print("Key 'tlo.methods.contraception' not found in log_df.")
-        
+   
     # last year simulated
     #co_sum_df = log_df['tlo.methods.contraception']['contraception_use_summary'].copy()
-    co_sum_df = log_df['tlo.methods.contraception_demo_nuhdss']['contraception_use_summary'].copy()
+    co_sum_df = log_df['tlo.methods.contraception_nuhdss']['contraception_use_summary'].copy()
     co_sum_df['year'] = co_sum_df['date'].dt.year
     last_year_simulated = co_sum_df.loc[co_sum_df.shape[0] - 1, 'year']
     last_day_simulated = co_sum_df.loc[co_sum_df.shape[0] - 1, 'date']
@@ -121,7 +117,7 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
     if in_plot_use_time_bool or in_plot_use_time_method_bool or in_plot_pregnancies_bool:
 
         # Load Model Results
-        co_df = log_df['tlo.methods.contraception_demo_nuhdss']['contraception_use_summary'].set_index('date').copy()
+        co_df = log_df['tlo.methods.contraception_nuhdss']['contraception_use_summary'].set_index('date').copy()
         model_months = pd.to_datetime(co_df.index)
         # Keep only data up to 2050
         if (model_months.year[-1]) > 2050:
@@ -253,10 +249,10 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
                            )
                 return _x.groupby(_x.index).mean().stack()
 
-            if in_log_file == 'run_analysis_contraception_no_diseases__2025-01-22T153209.log':
+            if in_log_file == 'run_analysis_nuhdss__2025-02-03T152412.log':
                 # without interv, 250K till 2050; final costs update EHP & OHT + rebased on master
                 # + pregn test corrected
-                results_folder_name = 'run_analysis_contraception_no_diseases-2025-01-22T123209Z'
+                results_folder_name = 'run_analysis_nuhdss-2025-02-03T122412Z'
             # elif in_log_file == 'run_analysis_contraception_no_diseases__2023-05-06T170612.log':
             #     # with interv, 250K till 2050; final costs update EHP & OHT + rebased on master + pregn test corrected
             #     results_folder_name = 'run_analysis_contraception_no_diseases-2023-05-06T170359Z'
@@ -277,7 +273,7 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
             #  (hence no need of extracting the log file)
 
             mean_usage = summarize(extract_results(results_folder,
-                                                   module="tlo.methods.contraception_demo_nuhdss",
+                                                   module="tlo.methods.contraception_nuhdss",
                                                    key="contraception_use_summary",
                                                    custom_generate_series=get_annual_mean_usage,
                                                    do_scaling=False),
@@ -322,7 +318,7 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
 
             # Load Model Results by Months up to 2050
             women1549_total = co_df.sum(axis=1)[0:len(plot_months)]
-            preg_df_by_months = log_df['tlo.methods.contraception']['pregnancy'].set_index('date').copy()
+            preg_df_by_months = log_df['tlo.methods.contraception_nuhdss']['pregnancy'].set_index('date').copy()
             if preg_df_by_months.index.year[-1] > 2050:
                 preg_df_by_months = preg_df_by_months[preg_df_by_months.index.year <= 2050]
             # If not warn yet, warn that the sim ended before 2050, hence the plots will be prepared till then only
@@ -450,7 +446,7 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
         # ['date', 'IUD', 'female_sterilization', 'implant', 'injections',
         # 'male_condom', 'not_using', 'other_modern', 'other_traditional',
         # 'periodic_abstinence', 'pill', 'withdrawal']:
-        co_use_df = log_df['tlo.methods.contraception']['contraception_use_summary'].copy()
+        co_use_df = log_df['tlo.methods.contraception_nuhdss']['contraception_use_summary'].copy()
         co_use_df['women_total'] = co_use_df.sum(axis=1)
         cols_to_keep = in_contraceptives_order.copy()
         cols_to_keep.append('date')
