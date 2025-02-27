@@ -87,16 +87,17 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
     # Load without simulating again - parse the simulation logfile to get the
     # output dataframes
     log_df = parse_log_file('outputs/' + in_log_file, level=logging.DEBUG)
-    print("log dataframe" ,log_df)
+    #print("log dataframe" ,log_df)
     if 'tlo.methods.contraception_nuhdss' in log_df:
         print(log_df['tlo.methods.contraception_nuhdss'].keys())
     else:
         print("Key 'tlo.methods.contraception_nuhdss' not found in log_df.")
         
-    # last year simulated
-    #
+    
+    #-------------------------------------- extract use of contraception and save data -----------------------------------#
+
     co_sum_df = log_df['tlo.methods.contraception_nuhdss']['contraception_use_summary'].copy()
-    print("contaceptives summary",co_sum_df )
+    #print("contaceptives summary",co_sum_df )
     data_con = pd.DataFrame(co_sum_df)
 
     data_con['date'] = pd.to_datetime(data_con['date'])
@@ -104,17 +105,14 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
     # Extract year from 'date' column
     data_con['year'] = data_con['date'].dt.year
 
-    data_con['year'] = data_con['date'].dt.year
-
     # Exclude datetime columns
     numeric_data = data_con.select_dtypes(exclude=['datetime64[ns]'])
 
     # Perform groupby and sum on the numeric data
-    yearly_df = numeric_data.groupby('year').sum()
-
-    # Display the result
+    yearly_df = numeric_data.groupby('year').sum().reset_index()
     print(f"Yearly contraception data:\n{yearly_df}")
-  #================ save yearly contraceptive data ========================  
+
+  #------------ save yearly contraceptive data --------------------- 
     # Define the full path for the CSV file
     csv_file_path = outputpath / 'yearly_contraception_data.csv'
 
@@ -122,8 +120,54 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
     yearly_df.to_csv(csv_file_path, index=False)
 
     print(f"Yearly contraception data has been saved to {csv_file_path}")
+#---------------------------------------- population data ------------------------------------------------------#
+    yearly_population = log_df['tlo.methods.demography_nuhdss']['population'].copy()
+    print("The population data", yearly_population)
 
-    #contraception per age group
+    csv_file_path = outputpath / 'yearly_population_data.csv'
+
+    # Save the DataFrame to the CSV file
+    yearly_population.to_csv(csv_file_path, index=False)
+
+    print(f"Yearly population data has been saved to {csv_file_path}")
+    
+#----------------------------------------- births data ---------------------------------------------------------#
+    #yearly_births = log_df['tlo.methods.demography_nuhdss']['on_birth'].copy()
+    #print("The births data", yearly_births)
+
+#----------------------------------------- contraception changes---------------------------------------------------#
+    contraception_change = log_df['tlo.methods.contraception_nuhdss']['contraception_change'].copy()
+    print("The changes in contraception are",contraception_change )
+#------------------------------------------ pregnancies -----------------------------------------------------------#
+    pregnancies = log_df['tlo.methods.contraception_nuhdss']['pregnancy'].copy() 
+    pregnancies['date'] = pd.to_datetime(pregnancies['date'])
+    pregnancies['year'] = pregnancies['date'].dt.year
+    annual_pregnancy_counts = pregnancies.groupby('year').size().reset_index(name='count')
+    print("The pregnancies are", pregnancies )
+    print("Annual pregnancies are", annual_pregnancy_counts)
+#---------------------------------------------- Extract outcomes of pregnancies ----------------------------------# 
+    pregnacy_outcome = log_df['tlo.methods.contraception_nuhdss']['pregnancy_outcome'].copy()
+    # Convert 'date' column to datetime 
+    pregnacy_outcome['date'] = pd.to_datetime(pregnacy_outcome['date'])
+
+    # Extract the year into a new column
+    pregnacy_outcome['year'] = pregnacy_outcome['date'].dt.year
+    outcome_counts = pregnacy_outcome.groupby(['year', 'outcomes']).size().reset_index(name='count')
+    outcome_counts = outcome_counts.pivot(index='year', columns='outcomes', values='count')
+    outcome_counts = outcome_counts.reset_index()
+    print("Pregnancy outcome data", outcome_counts )
+
+      # Define the full path for the CSV file
+    csv_file_path = outputpath / 'yearly_pregnacy_outcomes_data.csv'
+
+    # Save the DataFrame to the CSV file
+    outcome_counts.to_csv(csv_file_path, index=False)
+
+    print(f"Yearly pregnancy outcome data has been saved to {csv_file_path}")
+    
+    
+
+    #------------------------------------------------ contraception per age group ---------------------------------------
     co_by_age =  log_df['tlo.methods.contraception_nuhdss']['contraception_use_summary_by_age'].copy()
     # Define age groups to iterate over
     age_groups = ['15-19', '20-24', '25-29', '30-34', '35-39', '40-44', '45-49']
@@ -133,7 +177,7 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
         cols_age_group = [col for col in co_by_age.columns if f"age_range={age_group}" in col]
         
         # Print to debug column selection
-        print(f"Columns selected for {age_group}: {cols_age_group}")
+        #print(f"Columns selected for {age_group}: {cols_age_group}")
         
         # If no columns are selected, print a message and skip this age group
         if not cols_age_group:
@@ -153,7 +197,7 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
         method_columns = df_age_group.filter(like="co_contraception").columns
 
         # Print to debug method columns
-        print(f"Method columns for {age_group}: {method_columns}")
+        #print(f"Method columns for {age_group}: {method_columns}")
 
         # Group by year and sum usage
         df_yearly = df_age_group.groupby('year')[method_columns].sum().reset_index()
@@ -166,8 +210,8 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
             df_yearly[col + "_prop"] = (df_yearly[col] / df_yearly["total_users"]).fillna(0)
 
         # Print results for current age group
-        print(f"Yearly usage for age group {age_group}:")
-        print(df_yearly[['year'] + [col + "_prop" for col in method_columns]].head())
+        #print(f"Yearly usage for age group {age_group}:")
+        #print(df_yearly[['year'] + [col + "_prop" for col in method_columns]].head())
         # ✅ PLOT RESULTS for each age group
         fig, ax = plt.subplots(figsize=(14, 7))
 
@@ -189,16 +233,16 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
        
             # Save the plot for the current age group
         plt.savefig(outputpath / (f'Contraception Use {in_id}__{age_group}.png'), format='png')
-        plt.show()
+        #plt.show()
             
-            
+    #-------------------------------------------- get the scalling factor -----------------------------------------#     
 
     co_sum_df['year'] = co_sum_df['date'].dt.year
     last_year_simulated = co_sum_df.loc[co_sum_df.shape[0] - 1, 'year']
     last_day_simulated = co_sum_df.loc[co_sum_df.shape[0] - 1, 'date']
     # Load scaling factor to rescale nmbs from simulated pop_size to pop size of Malawi
     df_scale = log_df['tlo.methods.population']['scaling_factor'].set_index('date').copy()
-    print("Dataframe scaling", df_scale)
+    #print("Dataframe scaling", df_scale)
     scaling_factor = df_scale.loc['2010-01-01', 'scaling_factor']
     #print("The scaling factor",scaling_factor )
 
@@ -216,13 +260,14 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
         Converts 0-255 RGB colors to 0-1 RGB.
         """
 
+#----------------------------- contraception use summary ------------------------------------------------#
     # %% Plot Contraception Use (By Method) Over Time?
     if in_plot_use_time_bool or in_plot_use_time_method_bool or in_plot_pregnancies_bool:
 
         # Load Model Results
         co_df = log_df['tlo.methods.contraception_nuhdss']['contraception_use_summary'].set_index('date').copy()
         model_months = pd.to_datetime(co_df.index)
-        print("Model months",model_months)
+        #print("Model months",model_months)
         # Keep only data up to 2050
         if (model_months.year[-1]) > 2050:
             plot_months = model_months[model_months.year <= 2050]
@@ -238,17 +283,14 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
         # %% Plot Contraception Use Over time:
         if in_plot_use_time_bool:
 
-            
+            #---------------------------------------------- total women, total using, total not using ------------------------
             # Load Model Results
             women1549_total = co_df.sum(axis=1)[0:len(plot_months)]
-            print("The total number of wome",women1549_total)
+            #print("The total number of wome",women1549_total)
             women_not_using = co_df.not_using[0:len(plot_months)]
-            print("Women not using contraception",women_not_using)
-
-            #total_women = women1549_total.sum()
-            #rint('THE TOTAL WOMEN',total_women)
+            #print("Women not using contraception",women_not_using)
             women_using = women1549_total - women_not_using
-            print("Women using contraceptions",women_using )
+            #print("Women using contraceptions",women_using )
 
             # Plot total values
             fig, ax = plt.subplots()
@@ -261,18 +303,12 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
             plt.title("Contraception Use")
             plt.xlabel("Year")
             plt.ylabel("Number of women")
-            # plt.gca().set_xlim(Date(2010, 1, 1), Date(2023, 1, 1)) to see only 2010-2023 (excl)
             plt.legend(['Total women age 15-49 years', 'Not Using Contraception', 'Using Contraception'])
             plt.savefig(outputpath / ('Contraception Use ' + in_id + "_UpTo" + str(plot_months.year[-1]) + in_suffix
                                       + '.png'), format='png')
 
-            # Plot proportions within 15-49 population
+            #------------------------------ Plot proportions within 15-49 population----------------------------------
             fig, ax = plt.subplots()
-            # # Since when (incl) are more than 50% women using
-            # women_using_prop = women_using / women1549_total
-            # women_using_prop_gt_half = women_using_prop[women_using_prop.gt(0.5)].index[0]
-            # print("Since when (incl) are more than 50% women using")
-            # print(women_using_prop_gt_half)
             ax.plot(np.asarray(plot_months), women_using * scaling_factor / women1549_total* scaling_factor, ls=line_style)
             #plt.axvline(x=Date(2025, 1, 1), ls=ls_start_interv, color='gray', label='interventions start')
             if in_set_ylims_bool:
@@ -283,22 +319,23 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
             plt.savefig(outputpath / ('Prop Fem1549 Using Contraceptive Over Time ' + in_id +
                                       "_UpTo" + str(plot_months.year[-1]) + in_suffix + '.png'), format='png')
             
+
             #Mean usage of contraception per year
             methods_df = co_df.drop(columns=['not_using'])
-            print("Methods being used", methods_df)
+           # print("Methods being used", methods_df)
 
             # Calculate proportion of women using each method per month
             contraceptive_props = methods_df.div(women1549_total, axis=0)
-            print("proportion using each contraceptive",contraceptive_props)
+            #print("proportion using each contraceptive",contraceptive_props)
 
             # Convert index to years for grouping
             contraceptive_props.index = contraceptive_props.index.year
 
             # Calculate mean proportion of each method per year
             mean_contraceptive_props_by_year = contraceptive_props.groupby(by=contraceptive_props.index).mean()
-            print("mean proportion of contraceptives per year",mean_contraceptive_props_by_year)
+            #print("mean proportion of contraceptives per year",mean_contraceptive_props_by_year)
             mean_all_methods_props_by_year = mean_contraceptive_props_by_year.mean(axis=1)
-            print("mean usage of all the methods per year", mean_all_methods_props_by_year)
+           # print("mean usage of all the methods per year", mean_all_methods_props_by_year)
 
             # Plot mean proportion of all contraceptive methods per year
             fig, ax = plt.subplots()
@@ -502,16 +539,17 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
             # plt.savefig(outputpath / ('Prop Fem1549 Using Method ' + in_id +
             #                           "_UpTo" + str(plot_months.year[-1]) + in_suffix + '.png'), format='png')
 
-            print("Figs: Contraception Use By Method Over time saved.")
+           # print("Figs: Contraception Use By Method Over time saved.")
 
+#_------------------------------------------ pregnancies over time ---------------------------------------------#
         # %% Plot Pregnancies Over time:
         if in_plot_pregnancies_bool:
 
             # Load Model Results by Months up to 2050
             women1549_total = co_df.sum(axis=1)[0:len(plot_months)]
-            print("Total women aged 15-49",women1549_total)
+           # print("Total women aged 15-49",women1549_total)
             preg_df_by_months = log_df['tlo.methods.contraception_nuhdss']['pregnancy'].set_index('date').copy()
-            print("pregnancies by months", preg_df_by_months)
+           # print("pregnancies by months", preg_df_by_months)
             if preg_df_by_months.index.year[-1] > 2050:
                 preg_df_by_months = preg_df_by_months[preg_df_by_months.index.year <= 2050]
             # If not warn yet, warn that the sim ended before 2050, hence the plots will be prepared till then only
@@ -524,6 +562,7 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
             preg_df_by_years = preg_df_by_months.copy()
             preg_df_by_years.index = pd.to_datetime(preg_df_by_years.index).year
             num_pregs_by_year = preg_df_by_years.groupby(by=preg_df_by_years.index).size()
+           # print("Number of pregancies per year", num_pregs_by_year )
             plot_years = num_pregs_by_year.index
             pregnancy_by_years = num_pregs_by_year.values
 
@@ -542,7 +581,7 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
             # Calculate Means of Pregnancies Proportions within Women 15-49 per Year
             # (women1549_total are monthly data, hence pregnancy monthly data used to calculate the means )
             num_pregs_by_months = preg_df_by_months.groupby(by=preg_df_by_months.index).size()
-            print("Number of pregnancies per month",num_pregs_by_months)
+            #print("Number of pregnancies per month",num_pregs_by_months)
             model_pregnancy_by_month = num_pregs_by_months.values
             preg_props = model_pregnancy_by_month / women1549_total
             preg_props.index = pd.to_datetime(preg_props.index).year
