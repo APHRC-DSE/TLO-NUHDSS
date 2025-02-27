@@ -340,6 +340,7 @@ def extract_results(results_folder: Path,
             try:
                 df: pd.DataFrame = load_pickled_dataframes(results_folder, draw, run, module)[module][key]
                 output_from_eval: pd.Series = generate_series(df)
+                print(f"Processing draw {draw}, run {run}, dataframe columns: {df.columns}")
                 assert isinstance(output_from_eval, pd.Series), (
                     'Custom command does not generate a pd.Series'
                 )
@@ -353,6 +354,7 @@ def extract_results(results_folder: Path,
                 res[draw_run] = None
 
     # Use pd.concat to compile results (skips dict items where the values is None)
+    print("Contents of res:", res)
     _concat = pd.concat(res, axis=1)
     _concat.columns.names = ['draw', 'run']  # name the levels of the columns multi-index
     return _concat
