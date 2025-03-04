@@ -67,7 +67,7 @@ def age_at_date(
     # Assume a fixed number of days in all years, ignoring variations due to leap years
     return (date - date_of_birth) / pd.Timedelta(days=DAYS_IN_YEAR)
 
-class Demography(Module):
+class DemographyNuhdss(Module):
     """
     The core demography module.
     """
@@ -79,7 +79,7 @@ class Demography(Module):
         self.initial_model_to_data_popsize_ratio = None  # will store scaling factor
         self.popsize_by_year = dict()  # will store total population size each year
         self.slums = None     # will store all the slums in a list
-        
+
 
     OPTIONAL_INIT_DEPENDENCIES = {'ImprovedHealthSystemAndCareSeekingScenarioSwitcher'}
      #<-- this forces that module to be the first registered module, if it's registered.
@@ -102,7 +102,7 @@ class Demography(Module):
         'pop_2015': Parameter(Types.DATA_FRAME, 'Population in 2015 for initialising population'),
         'slum_num_to_slum_name': Parameter(Types.DICT, 'Mapping from slum_num to slum name'),
         'fraction_of_births_male': Parameter(Types.REAL, 'Birth Sex Ratio'),
-        
+
     }
 
     # Next we declare the properties of individuals that this module provides.
@@ -115,7 +115,7 @@ class Demography(Module):
         'mother_id': Property(Types.INT, 'Unique identifier of mother of this individual'),
 
         'slum_num_of_residence': Property(
-            Types.CATEGORICAL, 
+            Types.CATEGORICAL,
             'The slum number in which the person is resident',
             categories=['SET_AT_RUNTIME']
         ),
@@ -151,15 +151,15 @@ class Demography(Module):
             Path(self.resourcefilepath) / 'demography' / 'ResourceFile_Population_nuhdss_2015.csv'
         )
 
-        # Lookup dicts to map from slum_num_of_residence (in the df) and slum name 
+        # Lookup dicts to map from slum_num_of_residence (in the df) and slum name
         self.slums = self.parameters['pop_2015']['slum'].drop_duplicates().to_list()
         self.parameters['slum_num_to_slum_name'] = \
             self.parameters['pop_2015'][['slum_Num', 'slum']].drop_duplicates()\
                                                                      .set_index('slum_Num')['slum']\
                                                                      .to_dict()
-                                                                     
 
-    
+
+
         # Fraction of babies that are male
         self.parameters['fraction_of_births_male'] = pd.read_csv(
             Path(self.resourcefilepath) / 'demography' / 'ResourceFile_Pop_Frac_Births_Male.csv'
@@ -172,7 +172,7 @@ class Demography(Module):
         # Define categorical properties for 'slum_of_residence'
         # Nb. This couldn't be done before categories for each of these has been determined following read-in of data
         # and initialising of other modules.
-       
+
         self.PROPERTIES['slum_num_of_residence'] = Property(
             Types.CATEGORICAL,
             'The slum (name) of residence (mapped from slum_num_of_residence).',
@@ -183,11 +183,11 @@ class Demography(Module):
             'The slum (name) of residence (mapped from slum_num_of_residence).',
             categories=self.parameters['pop_2015']['slum'].unique().tolist()
         )
-    
+
     def initialise_population(self, population):
         """Set properties for this module and compute the initial population scaling factor"""
         df = population.props
-        
+
 
         # Compute the initial population scaling factor
         self.initial_model_to_data_popsize_ratio = \
@@ -219,8 +219,8 @@ class Demography(Module):
             self.sim.date - DateOffset(years=int(demog_char_to_assign['Age'][i]),
                                        days=int(demog_char_to_assign['days_since_last_birthday'][i]))
             for i in demog_char_to_assign.index]
-        
-       
+
+
         # Assign the characteristics
         #df.is_alive,
         #df.is_alive.values[:] = True
@@ -265,12 +265,12 @@ class Demography(Module):
                 description='The data-to-model scaling factor (based on the initial population size, used to '
                             'multiply-up results so that they correspond to the real population size.'
             )
-       
-      
+
+
         # Check that the simulation does not run too long
         if self.sim.end_date.year >= 2100:
             raise Exception('Year is after 2100: Demographic data do not extend that far.')
-        
+
     def on_birth(self, mother_id, child_id):
         """Initialise our properties for a newborn individual.
         This is called by the simulation whenever a new person is born.
@@ -287,7 +287,7 @@ class Demography(Module):
         _id_inherit_from = get_person_id_to_inherit_from(child_id, mother_id, df, rng)
         _slum_num_of_residence = df.at[_id_inherit_from, 'slum_num_of_residence']
         _slum_of_residence = df.at[_id_inherit_from, 'slum_of_residence']
-    
+
         child = {
             #'is_alive': True,
             'date_of_birth': self.sim.date,
