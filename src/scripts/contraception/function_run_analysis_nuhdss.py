@@ -87,18 +87,45 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
     # Load without simulating again - parse the simulation logfile to get the
     # output dataframes
     log_df = parse_log_file('outputs/' + in_log_file, level=logging.DEBUG)
-    #print("log dataframe" ,log_df)
-    if 'tlo.methods.contraception_nuhdss' in log_df:
-        print(log_df['tlo.methods.contraception_nuhdss'].keys())
+    print("log dataframe" ,log_df)
+    if 'tlo.methods.contraception_nuhdss_slums' in log_df:
+        print(log_df['tlo.methods.contraception_nuhdss_slums'].keys())
     else:
-        print("Key 'tlo.methods.contraception_nuhdss' not found in log_df.")
-        
+        print("Key 'tlo.methods.contraception_nuhdss_slums' not found in log_df.")
+    #----------------------------------------- population data ---------------------------------- 
+    pop_df = log_df['tlo.methods.contraception_nuhdss_slums']['sex_distribution_summary'].copy()
+
+    pop_df['date'] = pd.to_datetime(pop_df['date'])
+    # Extract year from the date column
+    pop_df['year'] = pop_df['date'].dt.year
+    # Exclude datetime columns
     
+    # Get last entry for each year
+    yearly_data = pop_df.sort_values('date').groupby('year').last().reset_index()
+
+    # Compute total population
+    yearly_data['Total'] = yearly_data['F'] + yearly_data['M']
+
+    # Print yearly population data
+    #print("Yearly Population Data:\n", yearly_data[['year', 'F', 'M', 'Total']])
+    csv_file_path = outputpath / 'yearly_data.csv'
+
+    # Save the DataFrame to the CSV file
+    yearly_data.to_csv(csv_file_path, index=False)
+
+    print(f"Yearly population data has been saved to {csv_file_path}")
     #-------------------------------------- extract use of contraception and save data -----------------------------------#
 
-    co_sum_df = log_df['tlo.methods.contraception_nuhdss']['contraception_use_summary'].copy()
-    #print("contaceptives summary",co_sum_df )
+    co_sum_df = log_df['tlo.methods.contraception_nuhdss_slums']['contraception_use_summary'].copy()
+    print("contraceptives uptake",co_sum_df )
     data_con = pd.DataFrame(co_sum_df)
+     # Define the full path for the CSV file
+    csv_file_path = outputpath / 'daily_contraception_data.csv'
+
+    # Save the DataFrame to the CSV file
+    data_con.to_csv(csv_file_path, index=False)
+
+    print(f"Daily contraception data has been saved to {csv_file_path}")
 
     data_con['date'] = pd.to_datetime(data_con['date'])
 
@@ -121,32 +148,32 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
 
     print(f"Yearly contraception data has been saved to {csv_file_path}")
 #---------------------------------------- population data ------------------------------------------------------#
-    yearly_population = log_df['tlo.methods.demography_nuhdss']['population'].copy()
-    print("The population data", yearly_population)
+    #yearly_population = log_df['tlo.methods.demography_nuhdss_slums']['population'].copy()
+    #print("The population data", yearly_population)
 
-    csv_file_path = outputpath / 'yearly_population_data.csv'
+    #csv_file_path = outputpath / 'yearly_population_data.csv'
 
     # Save the DataFrame to the CSV file
-    yearly_population.to_csv(csv_file_path, index=False)
+    #yearly_population.to_csv(csv_file_path, index=False)
 
-    print(f"Yearly population data has been saved to {csv_file_path}")
+    #print(f"Yearly population data has been saved to {csv_file_path}")
     
 #----------------------------------------- births data ---------------------------------------------------------#
     #yearly_births = log_df['tlo.methods.demography_nuhdss']['on_birth'].copy()
     #print("The births data", yearly_births)
 
 #----------------------------------------- contraception changes---------------------------------------------------#
-    contraception_change = log_df['tlo.methods.contraception_nuhdss']['contraception_change'].copy()
+    contraception_change = log_df['tlo.methods.contraception_nuhdss_slums']['contraception_change'].copy()
     print("The changes in contraception are",contraception_change )
 #------------------------------------------ pregnancies -----------------------------------------------------------#
-    pregnancies = log_df['tlo.methods.contraception_nuhdss']['pregnancy'].copy() 
+    pregnancies = log_df['tlo.methods.contraception_nuhdss_slums']['pregnancy'].copy() 
     pregnancies['date'] = pd.to_datetime(pregnancies['date'])
     pregnancies['year'] = pregnancies['date'].dt.year
     annual_pregnancy_counts = pregnancies.groupby('year').size().reset_index(name='count')
     print("The pregnancies are", pregnancies )
     print("Annual pregnancies are", annual_pregnancy_counts)
 #---------------------------------------------- Extract outcomes of pregnancies ----------------------------------# 
-    pregnacy_outcome = log_df['tlo.methods.contraception_nuhdss']['pregnancy_outcome'].copy()
+    pregnacy_outcome = log_df['tlo.methods.contraception_nuhdss_slums']['pregnancy_outcome'].copy()
     # Convert 'date' column to datetime 
     pregnacy_outcome['date'] = pd.to_datetime(pregnacy_outcome['date'])
 
@@ -168,7 +195,7 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
     
 
     #------------------------------------------------ contraception per age group ---------------------------------------
-    co_by_age =  log_df['tlo.methods.contraception_nuhdss']['contraception_use_summary_by_age'].copy()
+    co_by_age =  log_df['tlo.methods.contraception_nuhdss_slums']['contraception_use_summary_by_age'].copy()
     # Define age groups to iterate over
     age_groups = ['15-19', '20-24', '25-29', '30-34', '35-39', '40-44', '45-49']
 
@@ -265,7 +292,7 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
     if in_plot_use_time_bool or in_plot_use_time_method_bool or in_plot_pregnancies_bool:
 
         # Load Model Results
-        co_df = log_df['tlo.methods.contraception_nuhdss']['contraception_use_summary'].set_index('date').copy()
+        co_df = log_df['tlo.methods.contraception_nuhdss_slums']['contraception_use_summary'].set_index('date').copy()
         model_months = pd.to_datetime(co_df.index)
         #print("Model months",model_months)
         # Keep only data up to 2050

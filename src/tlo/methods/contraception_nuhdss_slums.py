@@ -768,7 +768,9 @@ class ContraceptionPoll(RegularEvent, PopulationScopeEventMixin):
         """ Determine women that will start, stop or switch contraceptive method."""
 
         df = self.sim.population.props
+       
 
+        
         possible_co_users = ((df.sex == 'F') &
                              df.is_alive &
                              df.age_years.between(self.age_low, self.age_high) &
@@ -998,6 +1000,8 @@ class ContraceptionPoll(RegularEvent, PopulationScopeEventMixin):
             # Set date of labour in the Labour module
             self.sim.modules['Labour'].set_date_of_labour(w)
 
+        
+
             # Log that a pregnancy has occurred
             logger.info(key='pregnancy',
                         data={
@@ -1016,7 +1020,28 @@ class ContraceptionLoggingEvent(RegularEvent, PopulationScopeEventMixin):
 
     def apply(self, population):
         df = population.props
+        #print('THE DATA BEING USED IS', df)
+        print("PROPERTIES OF SIMULATED POPULATION", df)
+        #log population per year
 
+        logger.info(key='sex_distribution_summary',
+            data=df.loc[df.is_alive, 'sex'].value_counts().to_dict(),
+            description='Counts of alive individuals by sex at a point in time.')
+        
+        # df_filtered =pd.DataFrame(df.loc[
+        #                 df.is_alive & (df.sex == 'F') & df.age_years.between(15, 49), 'co_contraception'
+        #             ])
+        # print("THE FILTERED DATA IS ", df_filtered)
+    
+    
+
+        # logger.info(
+        #     key='contraception_use_summary_uniquids',
+        #     data=pd.DataFrame(df.loc[
+        #                 df.is_alive & (df.sex == 'F') & df.age_years.between(15, 49), 'co_contraception'
+        #             ]),
+        #     description='Yearly summary of unique women using each contraceptive method, including IDs.'
+        # )
         # Log summary of usage of contraceptives (without age-breakdown)
         # (NB. sort_index ensures the resulting dict has keys in the same order, which is requirement of the logging.)
         logger.info(key='contraception_use_summary',
