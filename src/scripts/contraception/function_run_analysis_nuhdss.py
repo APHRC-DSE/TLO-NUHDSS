@@ -575,7 +575,7 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
             # Load Model Results by Months up to 2050
             women1549_total = co_df.sum(axis=1)[0:len(plot_months)]
            # print("Total women aged 15-49",women1549_total)
-            preg_df_by_months = log_df['tlo.methods.contraception_nuhdss']['pregnancy'].set_index('date').copy()
+            preg_df_by_months = log_df['tlo.methods.contraception_nuhdss_slums']['pregnancy'].set_index('date').copy()
            # print("pregnancies by months", preg_df_by_months)
             if preg_df_by_months.index.year[-1] > 2050:
                 preg_df_by_months = preg_df_by_months[preg_df_by_months.index.year <= 2050]
