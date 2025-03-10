@@ -46,7 +46,7 @@ time_start = time.time()
 # TODO: estimate the pop_size_simulated from scaling_factor (and if not same for both sims, add them to IDs instead to
 #  suffix) & return last year of sims (the same for that) // separate them as pop_size_simulated & last_year_simulated
 # pop_size_simulated = "2K"
-pop_size_simulated = "46750"
+pop_size_simulated = "250000"
 branch_name = 'co_final'
 # which results to use
 # - Without interv
