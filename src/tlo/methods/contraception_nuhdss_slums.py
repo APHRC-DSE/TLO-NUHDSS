@@ -1021,7 +1021,7 @@ class ContraceptionLoggingEvent(RegularEvent, PopulationScopeEventMixin):
     def apply(self, population):
         df = population.props
         #print('THE DATA BEING USED IS', df)
-        print("PROPERTIES OF SIMULATED POPULATION", df)
+        print("PROPERTIES OF SIMULATED POPULATION", df.columns)
         #log population per year
 
         logger.info(key='sex_distribution_summary',

@@ -46,13 +46,13 @@ time_start = time.time()
 # TODO: estimate the pop_size_simulated from scaling_factor (and if not same for both sims, add them to IDs instead to
 #  suffix) & return last year of sims (the same for that) // separate them as pop_size_simulated & last_year_simulated
 # pop_size_simulated = "2K"
-pop_size_simulated = "10k"
+pop_size_simulated = "15k"
 branch_name = 'co_final'
 # which results to use
 # - Without interv
 #datestamp_without_log = '2025-02-04T123913'
 # 2K till 2099, final costs update EHP & OHT + pregn test to initiate co: '2023-04-26T141435' from 2023-04-26T141159Z
-datestamp_without_log = '2025-03-10T104426'
+datestamp_without_log = '2025-03-10T121534'
 # 250K till 2050; final costs update EHP & OHT + rebased on master + pregn test corrected: '2023-05-06T170512'
 #    from 2023-05-06T170253Z
 # # - With interv
