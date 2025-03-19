@@ -103,7 +103,13 @@ class ContraceptionSlums(Module):
         'interventions_start_date': Parameter(
             Types.DATE, "The date since which the FP interventions (pop & ppfp) are implemented, if at all (ie, if "
                         "use_interventions==True"),
-
+        'months_to_next_periodic_campaign': Parameter(
+            Types.INT, "Number of months between periodic campaigns"
+        ),
+        'max_campaign_coverage': Parameter(
+            Types.REAL, "Maximum campaign coverage. Maximum campaign coverage is greater or equal to 0 and "
+                       "less or equal to 1 (0 <= maximum coverage <= 1)"
+        )
         # 'livebirth_prob': Parameter(
         #     Types.INT, "The probability of pregnancy resulting to a live birth."),
 
@@ -127,7 +133,7 @@ class ContraceptionSlums(Module):
     # 'other traditional' includes lactational amenohroea (LAM),  standard days method (SDM), 'other traditional
     #  method').
     contraceptives_initiated_with_additional_items = {
-        'pill', 'IUD', 'injections', 'implant', 
+        'pill', 'IUD', 'injections', 'implant',
     }
     # These are methods for which additional items ('co_initiation') are used to initiate the method after not using any
     # contraceptive or after using a method which is not in this category.
@@ -183,7 +189,7 @@ class ContraceptionSlums(Module):
         # Import selected sheets from the workbook as the parameters
         sheet_names = [
             'Method_Use_In_2015',
-            'Pregnancy_NotUsing_In_2015',  
+            'Pregnancy_NotUsing_In_2015',
             'Failure_ByMethod',
             'Initiation_ByAge', #
             'Initiation_ByMethod',
@@ -210,7 +216,6 @@ class ContraceptionSlums(Module):
 
         # Import 2015 pop and count numbs of women 15-49 & 30-49
         pop_2015 = self.sim.modules["DemographySlums"].parameters["pop_2015"]
-        print("pop_2015 are", pop_2015)
         n_females_aged_15_to_49_in_2015 = pop_2015[
             (pop_2015.Sex == "F") & (pop_2015.Age >= 15) & (pop_2015.Age <= 49)
         ].Count.sum()
@@ -236,12 +241,11 @@ class ContraceptionSlums(Module):
         df.loc[df.is_alive, 'co_unintended_preg'] = False
         df.loc[df.is_alive, 'co_date_of_last_fp_appt'] = pd.NaT
 
-      
+
 
         # 2) Assign contraception method
         # Select females aged 15-49 from population, for current year
         females1549 = df.is_alive & (df.sex == 'F') & df.age_years.between(15, 49)
-        print("females aged 15-49 years", females1549)
         p_method = self.processed_params['initial_method_use']
         df.loc[females1549, 'co_contraception'] = df.loc[females1549, 'age_years'].apply(
             lambda _age_years: self.rng.choice(p_method.columns, p=p_method.loc[_age_years])
@@ -273,6 +277,9 @@ class ContraceptionSlums(Module):
         # Schedule first occurrences of Contraception Poll to occur at the beginning of the simulation
         sim.schedule_event(ContraceptionPoll(self, run_update_contraceptive=self.run_update_contraceptive), sim.date)
 
+        # start campaign
+        sim.schedule_event(PeriodicCampaignEvent(self), self.parameters['interventions_start_date'])
+
         # Retrieve the consumables codes for the consumables used
         if self.use_healthsystem:
             self.cons_codes = self.get_item_code_for_each_contraceptive()
@@ -302,8 +309,8 @@ class ContraceptionSlums(Module):
         * 2) Initialise properties for the newborn
         """
         df = self.sim.population.props
-        
-            
+
+
         if mother_id >= 0:  # check if direct birth look for positive mother ids
             self.end_pregnancy(person_id=mother_id)
 
@@ -321,15 +328,15 @@ class ContraceptionSlums(Module):
     def end_pregnancy(self, person_id):
         """
         End the pregnancy. Reset pregnancy status and may initiate a contraceptive method.
-    
+
         """
-    
+
         assert self.sim.population.props.at[person_id, 'co_contraception'] \
             not in self.contraceptives_initiated_with_additional_items
         self.sim.population.props.at[person_id, 'is_pregnant'] = False
         person_age = self.sim.population.props.at[person_id, 'age_years']
         self.select_contraceptive_following_birth(person_id, person_age)
-        
+
 
     def process_params(self):
         """Process parameters that have been read-in."""
@@ -370,9 +377,9 @@ class ContraceptionSlums(Module):
 
             # Year effect
             year_effect = time_age_trend_in_initiation()
-            
+
             def apply_age_year_effects(p_method):
-                
+
                 # Assemble into age-specific data-frame:
                 probs_by_method_all_ages = p_method.copy().drop('not_using')
                 p_init = dict()
@@ -381,7 +388,7 @@ class ContraceptionSlums(Module):
                     p_init_this_year = dict()
                     for a in age_effect.index:
                         p_init_this_year[a] = probs_by_method_all_ages * age_effect.at[a] * year_effect.at[year, a]
-                        
+
                     p_init_this_year_df = pd.DataFrame.from_dict(p_init_this_year, orient='index')
 
                     # Validate DataFrame structure
@@ -391,14 +398,14 @@ class ContraceptionSlums(Module):
                         "Index mismatch after processing!"
                     assert (p_init_this_year_df >= 0.0).all().all(), \
                         "Negative probabilities detected!"
-                    
+
                     p_init[year] = p_init_this_year_df
                     #print("probability of initiationp", p_init[year])
                 return p_init
-            
-        
+
+
             return apply_age_year_effects(p_init_by_method)
-        
+
         def contraception_switch():
             """Get the probability per month of a woman switching to a contraceptive method, given that she is currently
             using a different one."""
@@ -419,7 +426,7 @@ class ContraceptionSlums(Module):
             assert np.isclose(1.0, switching_matrix_normalized.sum(axis=0)).all()
 
             return p_switch_from, switching_matrix_normalized
-        
+
         def contraception_stop():
             """Get the probability per month of a woman stopping use of contraceptive method."""
 
@@ -501,7 +508,7 @@ class ContraceptionSlums(Module):
                 data=[scaling_factor_as_dict[AGE_RANGE_LOOKUP[_age_year]] for _age_year in _ages]
             )
 
-       
+
         def pregnancy_no_contraception():
             """Get the probability per month of a woman becoming pregnant if she is not using any contraceptive method."""
 
@@ -519,7 +526,7 @@ class ContraceptionSlums(Module):
             ).all()
 
             return p_pregnancy_no_contraception_per_month.mul(scaling_factor_on_monthly_risk_of_pregnancy(), axis=0)
-        
+
         def pregnancy_with_contraception():
             """Get the probability per month of a woman becoming pregnant if she is using a contraceptive method."""
             p_pregnancy_by_method_per_month = self.parameters['Failure_ByMethod'].loc[0]
@@ -538,7 +545,7 @@ class ContraceptionSlums(Module):
             assert (p_pregnancy_with_contraception_per_month.index == range(15, 50)).all()
             assert set(p_pregnancy_with_contraception_per_month.columns) == set(
                 self.all_contraception_states - {"not_using"})
-            
+
 
             return p_pregnancy_with_contraception_per_month.mul(scaling_factor_on_monthly_risk_of_pregnancy(), axis=0)
 
@@ -595,28 +602,28 @@ class ContraceptionSlums(Module):
             contraception_initiation_with_interv(processed_params['p_start_per_month'])
         processed_params['p_start_after_birth'] = \
             contraception_initiation_after_birth_with_interv(processed_params['p_start_after_birth'])
-        
+
 
         return processed_params
 
-        
+
     def select_contraceptive_following_birth(self, mother_id, mother_age):
     # Get the probabilities
         probs_all = self.processed_params['p_start_after_birth']
-    
+
         # Print for debugging
         #print("prob start after birth", probs_all.index, probs_all.values)
-    
+
         # Check if the probabilities sum to 1
         total_prob = sum(probs_all.values)
         if total_prob != 1:
             #print(f"Warning: Probabilities do not sum to 1. They sum to {total_prob}. Normalizing...")
             # Normalize the probabilities
             probs_all = probs_all / total_prob  # This will ensure the probabilities sum to 1
-        
+
         # Select a contraceptive method based on the normalized probabilities
         new_contraceptive = self.rng.choice(probs_all.index, p=probs_all.values)
-        
+
         # Schedule the contraceptive change
         self.schedule_batch_of_contraceptive_changes(ids=[mother_id], old=['not_using'], new=[new_contraceptive])
 
@@ -639,7 +646,7 @@ class ContraceptionSlums(Module):
         states_to_maintain_on = sorted(self.states_that_may_require_HSI_to_maintain_on)
 
         for _woman_id, _old, _new in zip(ids, old, new):
-        
+
             # Does this change require an HSI?
             is_a_switch = _old != _new
             reqs_appt = _new in self.states_that_may_require_HSI_to_switch_to if is_a_switch \
@@ -768,9 +775,9 @@ class ContraceptionPoll(RegularEvent, PopulationScopeEventMixin):
         """ Determine women that will start, stop or switch contraceptive method."""
 
         df = self.sim.population.props
-       
 
-        
+
+
         possible_co_users = ((df.sex == 'F') &
                              df.is_alive &
                              df.age_years.between(self.age_low, self.age_high) &
@@ -874,7 +881,7 @@ class ContraceptionPoll(RegularEvent, PopulationScopeEventMixin):
         new_co= transition_states(
             df.loc[switch_idx, 'co_contraception'], pp['p_switching_to'], rng
         )
-    
+
 
         # Do the contraceptive change for those switching
         if len(new_co) > 0:
@@ -960,7 +967,7 @@ class ContraceptionPoll(RegularEvent, PopulationScopeEventMixin):
             & ~df.la_has_had_hysterectomy
             & ~df.la_is_postpartum
             & ~df.ps_ectopic_pregnancy.isin(['not_ruptured', 'ruptured']))
-        
+
         #print("pp_data index",pp['p_pregnancy_no_contraception_per_month'].index)
         if subset.sum():
             # Get the probability of pregnancy for each individual
@@ -968,7 +975,7 @@ class ContraceptionPoll(RegularEvent, PopulationScopeEventMixin):
                 lambda row: pp['p_pregnancy_no_contraception_per_month'].at[row['age_years']],
                     axis=1
                     )
-      
+
             # Determine if there will be a pregnancy for each individual
             idx_pregnant = prob_pregnancy.index[prob_pregnancy > rng.rand(len(prob_pregnancy))]
 
@@ -1000,7 +1007,7 @@ class ContraceptionPoll(RegularEvent, PopulationScopeEventMixin):
             # Set date of labour in the Labour module
             self.sim.modules['Labour'].set_date_of_labour(w)
 
-        
+
 
             # Log that a pregnancy has occurred
             logger.info(key='pregnancy',
@@ -1013,6 +1020,43 @@ class ContraceptionPoll(RegularEvent, PopulationScopeEventMixin):
                         description='pregnancy following the failure of contraceptive method')
 
 
+
+class PeriodicCampaignEvent(RegularEvent, PopulationScopeEventMixin):
+    def __init__(self, module):
+        super().__init__(module, frequency=DateOffset(months=12))
+        self.param = self.module.parameters
+
+    def apply(self, population):
+        # get population dataframe
+        df = population.props
+        # Convert timedelta to months
+        time_in_months = (self.sim.date - pd.Timestamp("2010-01-01")).days  # Approximate days per month
+        # calculate campaign coverage at any given time
+        campaign_coverage_at_time = (self.param['max_campaign_coverage'] *
+                                     np.sin(np.pi * time_in_months / self.param['months_to_next_periodic_campaign']) ** 2)
+        # update values based on campaign coverage. Here, I am multiplying the coverage effect to the probabilities in
+        # each contraception method. To normalise the probabilities, I am summing up all probabilities, subtract from 1
+        # and add the difference to not_using category.
+        p_method = self.module.processed_params['initial_method_use'] * campaign_coverage_at_time
+        p_method['not_using'] = p_method.apply(lambda row: row['not_using'] + (1 - row.sum()), axis=1)
+        # Select females aged 15-49 from population, for current year
+        females1549 = (df.is_alive & (df.sex == 'F') & df.age_years.between(15, 49) &
+                       (df.co_contraception == 'not_using') & ~df.is_pregnant)
+        # Assign contraception method
+        new_contraceptive = df.loc[females1549, 'age_years'].apply(
+            lambda _age_years: self.module.rng.choice(p_method.columns, p=p_method.loc[_age_years])
+        )
+        # Select a contraceptive method based on the normalized probabilities
+        selected_for_contraception_method = new_contraceptive.loc[new_contraceptive != 'not_using']
+        if len(selected_for_contraception_method) > 0:
+            for idx in selected_for_contraception_method.index:
+                # Schedule the contraceptive change
+                self.module.schedule_batch_of_contraceptive_changes(ids=[idx],
+                                                                    old=['not_using'], new=[new_contraceptive[idx]])
+
+
+
+
 class ContraceptionLoggingEvent(RegularEvent, PopulationScopeEventMixin):
     def __init__(self, module):
         """Logs state of contraceptive usage in the population at a point in time."""
@@ -1020,20 +1064,18 @@ class ContraceptionLoggingEvent(RegularEvent, PopulationScopeEventMixin):
 
     def apply(self, population):
         df = population.props
-        #print('THE DATA BEING USED IS', df)
-        print("PROPERTIES OF SIMULATED POPULATION", df.columns)
         #log population per year
 
         logger.info(key='sex_distribution_summary',
             data=df.loc[df.is_alive, 'sex'].value_counts().to_dict(),
             description='Counts of alive individuals by sex at a point in time.')
-        
+
         # df_filtered =pd.DataFrame(df.loc[
         #                 df.is_alive & (df.sex == 'F') & df.age_years.between(15, 49), 'co_contraception'
         #             ])
         # print("THE FILTERED DATA IS ", df_filtered)
-    
-    
+
+
 
         # logger.info(
         #     key='contraception_use_summary_uniquids',
@@ -1091,7 +1133,7 @@ class SimplifiedPregnancyAndLabour(Module):
     """Simplified module to replace Labour, PregnancySupervisor and other associated modules.
     This version accounts for multiple pregnancy outcomes and logs them for later analysis.
     """
-    
+
     INIT_DEPENDENCIES = {'ContraceptionSlums'}
     ALTERNATIVE_TO = {'Labour'}
     METADATA = {}
@@ -1165,7 +1207,7 @@ class SimplifiedPregnancyAndLabour(Module):
         # Normalize probabilities in case they don't sum to 1.
         probs = probs / probs.sum()
         outcome = self.rng.choice(outcomes, p=probs)
-        
+
         self.sim.schedule_event(
             EndOfPregnancyEvent(module=self, person_id=person_id, outcome=outcome),
             random_date(
