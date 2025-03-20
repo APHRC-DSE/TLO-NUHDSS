@@ -76,7 +76,7 @@ class Hiv(Module, GenericFirstAppointmentsMixin):
         self.lm = dict()
         self.item_codes_for_consumables_required = dict()
 
-    INIT_DEPENDENCIES = {"DemographySlums", "HealthSystem", "Lifestyle", "SymptomManager"}
+    INIT_DEPENDENCIES = {"Demography", "HealthSystem", "Lifestyle", "SymptomManager"}
 
     OPTIONAL_INIT_DEPENDENCIES = {"HealthBurden"}
 
@@ -2107,7 +2107,7 @@ class HivAidsDeathEvent(Event, IndividualScopeEventMixin):
         if (df.at[person_id, "hv_art"] != "on_VL_suppressed") and (
             df.at[person_id, "tb_inf"] != "active"):
             # cause is HIV (no TB)
-            self.sim.modules["DemographySlums"].do_death(
+            self.sim.modules["Demography"].do_death(
                 individual_id=person_id,
                 cause="AIDS_non_TB",
                 originating_module=self.module,
@@ -2156,7 +2156,7 @@ class HivAidsTbDeathEvent(Event, IndividualScopeEventMixin):
 
             # treatment adjustment reduces probability of death
             if self.module.rng.rand() < risk_of_death:
-                self.sim.modules["DemographySlums"].do_death(
+                self.sim.modules["Demography"].do_death(
                     individual_id=person_id,
                     cause="AIDS_TB",
                     originating_module=self.module,
@@ -2195,7 +2195,7 @@ class HivAidsTbDeathEvent(Event, IndividualScopeEventMixin):
         # aids-tb and not on tb treatment
         elif not df.at[person_id, 'tb_on_treatment']:
             # Cause the death to happen immediately, cause defined by TB status
-            self.sim.modules["DemographySlums"].do_death(
+            self.sim.modules["Demography"].do_death(
                 individual_id=person_id, cause="AIDS_TB", originating_module=self.module
             )
 
@@ -3570,7 +3570,7 @@ class DummyHivModule(Module):
     """Dummy HIV Module - it's only job is to create and maintain the 'hv_inf' and 'hv_art' properties.
     This can be used in test files."""
 
-    INIT_DEPENDENCIES = {"DemographySlums"}
+    INIT_DEPENDENCIES = {"Demography"}
     ALTERNATIVE_TO = {"Hiv"}
 
     PROPERTIES = {
