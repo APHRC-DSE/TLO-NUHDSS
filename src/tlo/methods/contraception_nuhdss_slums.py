@@ -1,4 +1,3 @@
-import warnings
 from pathlib import Path
 
 import numpy as np
@@ -7,7 +6,6 @@ import pandas as pd
 from tlo import Date, DateOffset, Module, Parameter, Property, Types, logging
 from tlo.analysis.utils import flatten_multi_index_series_into_dict_for_logging
 from tlo.events import Event, IndividualScopeEventMixin, PopulationScopeEventMixin, RegularEvent
-from tlo.methods.hsi_event import HSI_Event
 from tlo.util import random_date, sample_outcome, transition_states
 
 logger = logging.getLogger(__name__)
@@ -37,10 +35,6 @@ class ContraceptionSlums(Module):
         'Pregnancy_NotUsing_In_2015': Parameter(Types.DATA_FRAME,
                                                 'Probability per year of a women not on contraceptive becoming '
                                                 'pregnant, by age.'),
-    #    'Pregnancy_NotUsing_HIVeffect': Parameter(Types.DATA_FRAME,
-    #                                               'Relative probability of becoming pregnant whilst not using a '
-    #                                               'a contraceptive for HIV-positive women compared to HIV-negative '
-    #                                            'women.'),
         'Failure_ByMethod': Parameter(Types.DATA_FRAME,
                                       'Probability per month of a women on a contraceptive becoming pregnant, by '
                                       'method.'),
@@ -110,17 +104,6 @@ class ContraceptionSlums(Module):
             Types.REAL, "Maximum campaign coverage. Maximum campaign coverage is greater or equal to 0 and "
                        "less or equal to 1 (0 <= maximum coverage <= 1)"
         )
-        # 'livebirth_prob': Parameter(
-        #     Types.INT, "The probability of pregnancy resulting to a live birth."),
-
-        # 'miscarriage_prob': Parameter(
-        #     Types.INT, "The probability of pregnancy resulting to a still birth."),
-
-        # 'stillbirth_prob': Parameter(
-        #     Types.INT, "The probability of pregnancy resulting to a still birth."),
-
-        # 'abortion_prob': Parameter(
-        #     Types.INT, "The probability of pregnancy resulting into an induced abortion")
     }
 
     all_contraception_states = {
@@ -142,7 +125,6 @@ class ContraceptionSlums(Module):
         'co_contraception': Property(Types.CATEGORICAL, 'Current contraceptive method',
                                      categories=sorted(all_contraception_states)),
         'is_pregnant': Property(Types.BOOL, 'Whether this individual is currently pregnant'),
-        #'pregnancy_outcome': property (Types.CATEGORICAL, 'Outcome of pregnancy which can be live birth, stillbirth,abortion, miscarriage'),
         'date_of_last_pregnancy': Property(Types.DATE, 'Date that the most recent or current pregnancy began.'),
         'co_unintended_preg': Property(Types.BOOL, 'Whether the most recent or current pregnancy was unintended.'),
         'co_date_of_last_fp_appt': Property(Types.DATE,
@@ -277,7 +259,7 @@ class ContraceptionSlums(Module):
         # Schedule first occurrences of Contraception Poll to occur at the beginning of the simulation
         sim.schedule_event(ContraceptionPoll(self, run_update_contraceptive=self.run_update_contraceptive), sim.date)
 
-        # start campaign
+        # schedule periodic campaign(to start in 2025)
         sim.schedule_event(PeriodicCampaignEvent(self), self.parameters['interventions_start_date'])
 
         # Retrieve the consumables codes for the consumables used
