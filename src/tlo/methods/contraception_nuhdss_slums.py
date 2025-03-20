@@ -6,7 +6,7 @@ import pandas as pd
 from tlo import Date, DateOffset, Module, Parameter, Property, Types, logging
 from tlo.analysis.utils import flatten_multi_index_series_into_dict_for_logging
 from tlo.events import Event, IndividualScopeEventMixin, PopulationScopeEventMixin, RegularEvent
-from tlo.util import random_date, sample_outcome, transition_states
+from tlo.util import random_date, sample_outcome, transition_states, read_csv_files
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -25,7 +25,7 @@ class ContraceptionSlums(Module):
 
     OPTIONAL_INIT_DEPENDENCIES = {'HealthSystem'}
 
-    ADDITIONAL_DEPENDENCIES = {'Labour', 'Hiv'}
+    ADDITIONAL_DEPENDENCIES = {'Labour'}
 
     METADATA = {}
 
@@ -166,8 +166,8 @@ class ContraceptionSlums(Module):
         """Import the relevant sheets from the ResourceFile (excel workbook) and declare values for other parameters
         (CSV ResourceFile).
         """
-        workbook = pd.read_excel(Path(self.resourcefilepath) / 'contraception' / 'ResourseFile_Contraception_nuhdss.xlsx', sheet_name=None)
-
+        workbook = read_csv_files(Path(self.resourcefilepath) / 'contraception' / 'ResourseFile_Contraception_nuhdss',
+                                  files=None)
         # Import selected sheets from the workbook as the parameters
         sheet_names = [
             'Method_Use_In_2015',
@@ -1154,9 +1154,9 @@ class SimplifiedPregnancyAndLabour(Module):
         self.outcome_log.append((date, person_id, outcome))
 
     def read_parameters(self, *args):
-        parameter_dataframe = pd.read_excel(
-            self.sim.modules['ContraceptionSlums'].resourcefilepath / 'contraception' / 'ResourceFile_Contraception.xlsx',
-            sheet_name='simplified_labour_parameters'
+        parameter_dataframe = pd.read_csv(
+            self.sim.modules['ContraceptionSlums'].resourcefilepath /
+            'contraception' / 'ResourceFile_Contraception' / 'simplified_labour_parameters.csv'
         )
         self.load_parameters_from_dataframe(parameter_dataframe)
 
