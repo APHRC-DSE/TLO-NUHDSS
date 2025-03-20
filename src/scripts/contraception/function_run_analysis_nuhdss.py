@@ -192,7 +192,17 @@ def analyse_contraception(in_id: str, in_log_file: str, in_suffix: str,
 
     print(f"Yearly pregnancy outcome data has been saved to {csv_file_path}")
     
-    
+    #------------------------------------- switching ---------------------------------------
+    switch_data =  log_df['tlo.methods.contraception_nuhdss_slums']['contraception_change'].copy()
+    print("The change in contraception", switch_data)
+
+     # Define the full path for the CSV file
+    csv_file_path = outputpath / 'Contraception_ switch.csv'
+
+    # Save the DataFrame to the CSV file
+    switch_data.to_csv(csv_file_path, index=False)
+
+    print("Switching data save to {csv_file_path}")
 
     #------------------------------------------------ contraception per age group ---------------------------------------
     co_by_age =  log_df['tlo.methods.contraception_nuhdss_slums']['contraception_use_summary_by_age'].copy()
