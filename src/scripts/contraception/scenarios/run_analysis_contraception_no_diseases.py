@@ -40,7 +40,7 @@ EvaJ/contraception_2023-02_inclPR807/AnalysisAllCalib_Contraception with the ana
 """
 
 from tlo import Date, logging
-from tlo.methods import contraception, demography, healthsystem, hiv, demo_nuhdss, contraception_demo_nuhdss
+from tlo.methods import contraception, demography, healthsystem, hiv
 from tlo.scenario import BaseScenario
 
 
@@ -49,9 +49,8 @@ class RunAnalysisCo(BaseScenario):
         super().__init__(
             seed=0,
             start_date=Date(2010, 1, 1),
-            #end_date=Date(2099, 12, 31),
-            end_date=Date(2030, 12, 31),
-            initial_population_size=10000,  # selected size for the Tim C at al. 2023 paper: 250K
+            end_date=Date(2099, 12, 31),
+            initial_population_size=250_000,  # selected size for the Tim C at al. 2023 paper: 250K
             number_of_draws=1,  # <- one scenario
             runs_per_draw=1,  # <- repeated this many times
         )
@@ -62,28 +61,27 @@ class RunAnalysisCo(BaseScenario):
             'directory': './outputs',  # <- (specified only for local running)
             'custom_levels': {
                 '*': logging.WARNING,
-                "tlo.methods.contraception_demo_nuhdss": logging.INFO,
-                "tlo.methods.demo_nuhdss": logging.INFO
+                "tlo.methods.contraception": logging.INFO,
+                "tlo.methods.demography": logging.INFO
             }
         }
 
     def modules(self):
         return [
             # Core Modules
-            #demography.Demography(resourcefilepath=self.resources),
-            demo_nuhdss.Demography(resourcefilepath=self.resources),
-            #healthsystem.HealthSystem(resourcefilepath=self.resources,
-          #                           cons_availability="all"),
+            demography.Demography(resourcefilepath=self.resources),
+            healthsystem.HealthSystem(resourcefilepath=self.resources,
+                                      cons_availability="all"),
 
             # - Contraception and replacement for Labour etc.
-            contraception_demo_nuhdss.Contraception(resourcefilepath=self.resources,
-                                         use_healthsystem=False  # default: True <-- using HealthSystem
-            #                             # if True initiation and switches to contraception require an HSI
+            contraception.Contraception(resourcefilepath=self.resources,
+                                        use_healthsystem=True  # default: True <-- using HealthSystem
+                                        # if True initiation and switches to contraception require an HSI
                                         ),
-            contraception_demo_nuhdss.SimplifiedPregnancyAndLabour(),
+            contraception.SimplifiedPregnancyAndLabour(),
 
-            # # - Supporting Module required by Contraception
-             hiv.DummyHivModule(),
+            # - Supporting Module required by Contraception
+            hiv.DummyHivModule(),
         ]
 
     def draw_parameters(self, draw_number, rng):

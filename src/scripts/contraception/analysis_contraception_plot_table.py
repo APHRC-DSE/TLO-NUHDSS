@@ -35,7 +35,7 @@ All the options can be set in the # TO SET # section below.
 import time
 from pathlib import Path
 
-import function_run_analysis_nuhdss as a_co
+import fnc_analyse_contraception as a_co
 import numpy as np
 import pandas as pd
 import tables
@@ -45,23 +45,23 @@ time_start = time.time()
 # TODO: estimate the pop_size_simulated from scaling_factor (and if not same for both sims, add them to IDs instead to
 #  suffix) & return last year of sims (the same for that) // separate them as pop_size_simulated & last_year_simulated
 # pop_size_simulated = "2K"
-pop_size_simulated = "10k"
+pop_size_simulated = "250K"
 branch_name = 'co_final'
 # which results to use
 # - Without interv
-datestamp_without_log = '2025-01-28T101016'
+# datestamp_without_log = '2023-04-26T141435'
 # 2K till 2099, final costs update EHP & OHT + pregn test to initiate co: '2023-04-26T141435' from 2023-04-26T141159Z
-#datestamp_without_log = '2025-01-22T140358'
+datestamp_without_log = '2023-05-06T170512'
 # 250K till 2050; final costs update EHP & OHT + rebased on master + pregn test corrected: '2023-05-06T170512'
 #    from 2023-05-06T170253Z
 # # - With interv
-#datestamp_with_log = '2025-01-27T182514'
+# datestamp_with_log = '2023-04-26T141545'
 # 2K till 2099, final costs update EHP & OHT + pregn test to initiate co: '2023-04-26T141545' from 2023-04-26T141321Z
-#datestamp_without_log = '2025-01-22T123209Z'
+datestamp_with_log = '2023-05-06T170612'
 # 250K till 2050; final costs update EHP & OHT + rebased on master + pregn test corrected: '2023-05-06T170612'
 #    from 2023-05-06T170359Z
-logFile_without = 'run_analysis_nuhdss__' + datestamp_without_log + '.log'
-#logFile_with = 'run_analysis_nuhdss__' + datestamp_with_log + '.log'
+logFile_without = 'run_analysis_contraception_no_diseases__' + datestamp_without_log + '.log'
+logFile_with = 'run_analysis_contraception_no_diseases__' + datestamp_with_log + '.log'
 ##
 # OUTPUT REQUIREMENTS
 # %%%% plots up to the year 2050 (regarding of how long are the simulations)
@@ -79,10 +79,10 @@ plot_pregnancies_bool = True
 # plot_depend_ratio_bool = False
 plot_depend_ratio_bool = True
 # %% Do you want to set the upper limits for the y-axes for the 3 plots above?
-set_ylims_bool = False
+set_ylims_bool = True
 # If the above is True (otherwise it doesn't matter),
 # upper limits for the figures (in the order [Use, Props of Use, Use By Method, Pregnancies, Props of Pregnancies ]
-#ylims_l = [1, 0.88, 3.6e6, 1.37e6, 0.019, 1]
+ylims_l = [1.08e7, 0.88, 3.6e6, 1.37e6, 0.019, 1]
 #
 # %%%% table
 # %% Run analysis? If the dataframes from the analysis are not prepared yet, then run the analysis.
@@ -92,7 +92,7 @@ set_ylims_bool = False
 run_analysis = True
 # %% Table the Use and Costs (By Method) Over time?
 # table_use_costs_bool = False
-table_use_costs_bool = False
+table_use_costs_bool = True
 # TODO: if there is no debug (ie lookup the key) logging - set the table_use_costs_bool = False and display a Warning
 # If the above is True (otherwise all the table inputs below doesn't matter),
 # years to summarise in the table of use and costs (totals for time periods between each 2 consecutive years;
@@ -101,20 +101,17 @@ TimePeriods_starts = [2023, 2031, 2041, 2051]
 # The use & cost values within the time periods in table can be "mean" (default) or can be changed to "max"
 # use_output = "max"  # TODO: test whether it still works
 # Order of modern contraception methods in which they should appear in figs and tables
-contraceptives_order = ['pill', 'IUD', 'injections', 'implant', 'male_condom', 'other_modern',
-        'rhythm', 'other_traditional']
-# contraceptives_order = ['pill', 'IUD', 'injections', 'implant', 'male_condom',
-#                         'female_sterilization', 'other_modern']
-# # MWK to USD exchange rate (1 MWK = mwk_to_usd_exchange_rate USD)
+contraceptives_order = ['pill', 'IUD', 'injections', 'implant', 'male_condom',
+                        'female_sterilization', 'other_modern']
+# MWK to USD exchange rate (1 MWK = mwk_to_usd_exchange_rate USD)
 mwk_to_usd_exchange_rate = 1/790
 # %% Calculate Contraception Pop and PPFP Intervention Costs over time?
 # calc_intervention_costs_bool = False
-calc_intervention_costs_bool = False
+calc_intervention_costs_bool = True
 # %% Round the number of women using contraception? No => None, Yes => set to nearest what to round them
 # (e.g. to nearest thousands => 1e3).
 # TODO: test whether None in following 3 pars works
-rounding_use_to = None
-#rounding_use_to = 1e3
+rounding_use_to = 1e3
 # %% Round the costs in MWK? No => None, Yes => set to nearest what to round them.
 rounding_costs_mwk_to = 1e6
 # %% Round the costs in USD? No => None, Yes => set to nearest what to round them.
@@ -124,10 +121,10 @@ rounding_costs_usd_to = rounding_costs_mwk_to / 1000
 # # Do you want to do both analysis? If not (set one of the below to False). The analysis won't be done and the outputs
 # from the other analysis (set to True below) will be used instead.
 do_no_interv_analysis = True
-#do_interv_analysis = True
+do_interv_analysis = True
 # %% Plot Consumables & Intervention Costs Over Time from the Table?
-plot_costs = False
-#plot_costs = True
+# plot_costs = False
+plot_costs = True
 ########################################################################################################################
 # Prepare the table of consumables (no sim is needed)
 tables.table_cons(mwk_to_usd_exchange_rate, contraceptives_order)
