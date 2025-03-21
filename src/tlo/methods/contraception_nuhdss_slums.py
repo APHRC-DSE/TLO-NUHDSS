@@ -638,33 +638,33 @@ class ContraceptionSlums(Module):
                             (date_today - date_of_last_appt[_woman_id]).days >=
                             days_between_appts[states_to_maintain_on.index(_old)]
                             )
-            do_appt = self.use_healthsystem and reqs_appt and (is_a_switch or due_appt)
-
-            # If the new method requires an HSI to be implemented, schedule the HSI:
-            if do_appt:
-                # If this is a change, or its maintenance and time for an appointment, schedule an appointment
-                self.sim.modules['HealthSystem'].schedule_hsi_event(
-                    hsi_event=HSI_Contraception_FamilyPlanningAppt(
-                        person_id=_woman_id,
-                        module=self,
-                        new_contraceptive=_new
-                    ),
-                    # select start_date for 0 max day delay; start_date or later for >=1 max day delay:
-                    topen=random_date(
-                        self.sim.date,
-                        self.sim.date + pd.DateOffset(
-                            days=self.parameters[
-                                     'max_days_delay_between_decision_to_change_method_and_hsi_scheduled'] + 1),
-                        self.rng2),
-                    tclose=None,
-                    priority=1
-                )
+            # do_appt = self.use_healthsystem and reqs_appt and (is_a_switch or due_appt)
+            #
+            # # If the new method requires an HSI to be implemented, schedule the HSI:
+            # if do_appt:
+            #     # If this is a change, or its maintenance and time for an appointment, schedule an appointment
+            #     self.sim.modules['HealthSystem'].schedule_hsi_event(
+            #         hsi_event=HSI_Contraception_FamilyPlanningAppt(
+            #             person_id=_woman_id,
+            #             module=self,
+            #             new_contraceptive=_new
+            #         ),
+            #         # select start_date for 0 max day delay; start_date or later for >=1 max day delay:
+            #         topen=random_date(
+            #             self.sim.date,
+            #             self.sim.date + pd.DateOffset(
+            #                 days=self.parameters[
+            #                          'max_days_delay_between_decision_to_change_method_and_hsi_scheduled'] + 1),
+            #             self.rng2),
+            #         tclose=None,
+            #         priority=1
+            #     )
+            # else:
+            # Otherwise, implement the change immediately:
+            if _old != _new:
+                self.do_and_log_individual_contraception_change(woman_id=_woman_id, old=_old, new=_new)
             else:
-                # Otherwise, implement the change immediately:
-                if _old != _new:
-                    self.do_and_log_individual_contraception_change(woman_id=_woman_id, old=_old, new=_new)
-                else:
-                    pass  # No need to do anything if the old is the same as the new and no HSI needed.
+                pass  # No need to do anything if the old is the same as the new and no HSI needed.
 
     def do_and_log_individual_contraception_change(self, woman_id: int, old, new):
         """Implement and then log a start / stop / switch of contraception. """
@@ -1012,7 +1012,7 @@ class PeriodicCampaignEvent(RegularEvent, PopulationScopeEventMixin):
         # get population dataframe
         df = population.props
         # Convert timedelta to months
-        time_in_months = (self.sim.date - pd.Timestamp("2010-01-01")).days  # Approximate days per month
+        time_in_months = (self.sim.date - self.module.parameters['interventions_start_date']).days  # Approximate days per month
         # calculate campaign coverage at any given time
         campaign_coverage_at_time = (self.param['max_campaign_coverage'] *
                                      np.sin(np.pi * time_in_months / self.param['months_to_next_periodic_campaign']) ** 2)
@@ -1100,7 +1100,6 @@ class StartInterventions(Event, PopulationScopeEventMixin):
 
         # Update module parameters to enable interventions
         self.module.processed_params = self.module.update_params_for_interventions()
-
 
 # -----------------------------------------------------------------------------------------------------------
 # -----------------------------------------------------------------------------------------------------------
