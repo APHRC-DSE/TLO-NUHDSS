@@ -1004,6 +1004,7 @@ class ContraceptionPoll(RegularEvent, PopulationScopeEventMixin):
 
 
 class PeriodicCampaignEvent(RegularEvent, PopulationScopeEventMixin):
+    """ This event seeks to apply a periodic campaign that will increase contraception uptake amongst women """
     def __init__(self, module):
         super().__init__(module, frequency=DateOffset(months=12))
         self.param = self.module.parameters
