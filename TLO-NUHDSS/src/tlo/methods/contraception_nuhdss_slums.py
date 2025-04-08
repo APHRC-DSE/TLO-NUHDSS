@@ -103,19 +103,6 @@ class ContraceptionSlums(Module):
         'max_campaign_coverage': Parameter(
             Types.REAL, "Maximum campaign coverage. Maximum campaign coverage is greater or equal to 0 and "
                        "less or equal to 1 (0 <= maximum coverage <= 1)"
-        ),
-        'effect_size': Parameter(
-            Types.REAL, "impact of the campaign on the population, proportion of women that will opt to use"
-            "contraception after campaign"
-        ),
-        'coverage': Parameter(
-            Types.REAL, "proportion of the population that will be covered by the campaign"
-        ),
-        'growth_rate': Parameter(
-            Types.REAL, "rate at which the contraception uptake increases"
-        ),
-        'initial_coverage': Parameter(
-            Types.REAL, "initial compaign coverage"
         )
     }
 
@@ -273,7 +260,7 @@ class ContraceptionSlums(Module):
         sim.schedule_event(ContraceptionPoll(self, run_update_contraceptive=self.run_update_contraceptive), sim.date)
 
         # schedule periodic campaign(to start in 2025)
-        sim.schedule_event(GradualRolloutCampaignEvent(self), self.parameters['interventions_start_date'])
+        sim.schedule_event(PeriodicCampaignEvent(self), self.parameters['interventions_start_date'])
 
         # Retrieve the consumables codes for the consumables used
         if self.use_healthsystem:
@@ -304,7 +291,7 @@ class ContraceptionSlums(Module):
         * 2) Initialise properties for the newborn
         """
         df = self.sim.population.props
-        #print("Available columns:", self.sim.population.props.columns)
+
 
         if mother_id >= 0:  # check if direct birth look for positive mother ids
             self.end_pregnancy(person_id=mother_id)
@@ -323,30 +310,14 @@ class ContraceptionSlums(Module):
     def end_pregnancy(self, person_id):
         """
         End the pregnancy. Reset pregnancy status and may initiate a contraceptive method.
+
         """
-        # Check if the person is alive before proceeding
-        if not self.sim.population.props.at[person_id, 'is_alive']:
-            return  # Do nothing if the person is already deceased
 
         assert self.sim.population.props.at[person_id, 'co_contraception'] \
             not in self.contraceptives_initiated_with_additional_items
-
         self.sim.population.props.at[person_id, 'is_pregnant'] = False
         person_age = self.sim.population.props.at[person_id, 'age_years']
-        
         self.select_contraceptive_following_birth(person_id, person_age)
-
-    # def end_pregnancy(self, person_id):
-    #     """
-    #     End the pregnancy. Reset pregnancy status and may initiate a contraceptive method.
-
-    #     """
-
-    #     assert self.sim.population.props.at[person_id, 'co_contraception'] \
-    #         not in self.contraceptives_initiated_with_additional_items
-    #     self.sim.population.props.at[person_id, 'is_pregnant'] = False
-    #     person_age = self.sim.population.props.at[person_id, 'age_years']
-    #     self.select_contraceptive_following_birth(person_id, person_age)
 
 
     def process_params(self):
@@ -1045,14 +1016,11 @@ class PeriodicCampaignEvent(RegularEvent, PopulationScopeEventMixin):
         # calculate campaign coverage at any given time
         campaign_coverage_at_time = (self.param['max_campaign_coverage'] *
                                      np.sin(np.pi * time_in_months / self.param['months_to_next_periodic_campaign']) ** 2)
-        print(campaign_coverage_at_time)
         # update values based on campaign coverage. Here, I am multiplying the coverage effect to the probabilities in
         # each contraception method. To normalise the probabilities, I am summing up all probabilities, subtract from 1
         # and add the difference to not_using category.
         p_method = self.module.processed_params['initial_method_use'] * campaign_coverage_at_time
-        print(p_method)
         p_method['not_using'] = p_method.apply(lambda row: row['not_using'] + (1 - row.sum()), axis=1)
-        print(p_method)
         # Select females aged 15-49 from population, for current year
         females1549 = (df.is_alive & (df.sex == 'F') & df.age_years.between(15, 49) &
                        (df.co_contraception == 'not_using') & ~df.is_pregnant)
@@ -1066,97 +1034,7 @@ class PeriodicCampaignEvent(RegularEvent, PopulationScopeEventMixin):
             for idx in selected_for_contraception_method.index:
                 # Schedule the contraceptive change
                 self.module.schedule_batch_of_contraceptive_changes(ids=[idx],
-                                                                    old=['not_using'], new=[new_contraceptive[idx]]
-                                                                    
-                                                                    )
-
-
-
-    
-class GradualRolloutCampaignEvent(RegularEvent, PopulationScopeEventMixin):
-    def __init__(self, module):
-        super().__init__(module, frequency=DateOffset(months=12))  # Apply campaigns after every 3 months
-        self.param = self.module.parameters
-        self.start_date = self.param['interventions_start_date']
-        self.C_max = self.param['max_campaign_coverage'] #maximum coverage
-        self.r = self.param['growth_rate']
-        self.C0 = self.param['initial_coverage']
-        
-        #When coverage reaches 50% of max
-        self.t0 =  24 
-
-        # Compute 'a' once to optimize performance
-        self.a = (self.C_max / self.C0) - 1  
-
-    def apply(self, population):
-        # Compute time in months since campaign started
-        time_in_months = (self.sim.date - self.start_date).days / 30  # Convert days to months
-
-        if time_in_months < 0:
-            return  # Campaign hasn't started yet
-
-        # Compute current coverage using logistic growth
-        campaign_coverage_at_time = self.C_max / (1 + self.a * np.exp(-self.r * (time_in_months - self.t0)))
-
-        # Apply coverage to population contraceptive probabilities
-        df = population.props
-        p_method = self.module.processed_params['initial_method_use'] * campaign_coverage_at_time
-        p_method['not_using'] = p_method.apply(lambda row: row['not_using'] + (1 - row.sum()), axis=1)
-
-        # Select females aged 15-49 who are not using contraception
-        females1549 = (df.is_alive & (df.sex == 'F') & df.age_years.between(15, 49) &
-                       (df.co_contraception == 'not_using') & ~df.is_pregnant)
-
-        # Assign contraception method
-        new_contraceptive = df.loc[females1549, 'age_years'].apply(
-            lambda _age_years: self.module.rng.choice(p_method.columns, p=p_method.loc[_age_years])
-        )
-
-        # Select individuals who will change to a contraceptive method
-        selected_for_contraception_method = new_contraceptive.loc[new_contraceptive != 'not_using']
-        if len(selected_for_contraception_method) > 0:
-            for idx in selected_for_contraception_method.index:
-                self.module.schedule_batch_of_contraceptive_changes(
-                    ids=[idx],
-                    old=['not_using'],
-                    new=[new_contraceptive[idx]]
-                )                
-
-class StaticCampaignEvent(RegularEvent, PopulationScopeEventMixin):
-    def __init__(self, module):
-        super().__init__(module, frequency=DateOffset(months=12))
-        self.param = self.module.parameters
-
-    def apply(self, population):
-        # get population dataframe
-        df = population.props
-
-        # calculate campaign coverage at any given time
-        campaign_coverage_at_time = (1.0 * self.param['effect_size'] * self.param['max_campaign_coverage'])
-                                     
-        # update values based on campaign coverage. Here, I am multiplying the coverage effect to the probabilities in
-        # each contraception method. To normalise the probabilities, I am summing up all probabilities, subtract from 1
-        # and add the difference to not_using category.
-        p_method = self.module.processed_params['initial_method_use'] * campaign_coverage_at_time
-        
-        p_method['not_using'] = p_method.apply(lambda row: row['not_using'] + (1 - row.sum()), axis=1)
-        
-        # Select females aged 15-49 from population, for current year
-        females1549 = (df.is_alive & (df.sex == 'F') & df.age_years.between(15, 49) &
-                       (df.co_contraception == 'not_using') & ~df.is_pregnant)
-        # Assign contraception method
-        new_contraceptive = df.loc[females1549, 'age_years'].apply(
-            lambda _age_years: self.module.rng.choice(p_method.columns, p=p_method.loc[_age_years])
-        )
-        # Select a contraceptive method based on the normalized probabilities
-        selected_for_contraception_method = new_contraceptive.loc[new_contraceptive != 'not_using']
-        if len(selected_for_contraception_method) > 0:
-            for idx in selected_for_contraception_method.index:
-                # Schedule the contraceptive change
-                self.module.schedule_batch_of_contraceptive_changes(ids=[idx],
-                                                                    old=['not_using'], new=[new_contraceptive[idx]]
-                                                                    
-                                                                    )
+                                                                    old=['not_using'], new=[new_contraceptive[idx]])
 
 
 
@@ -1174,7 +1052,7 @@ class ContraceptionLoggingEvent(RegularEvent, PopulationScopeEventMixin):
             data=df.loc[df.is_alive, 'sex'].value_counts().to_dict(),
             description='Counts of alive individuals by sex at a point in time.')
 
-       
+        
         logger.info(key='contraception_use_summary',
                     data=df.loc[
                         df.is_alive & (df.sex == 'F') & df.age_years.between(15, 49), 'co_contraception'
@@ -1231,9 +1109,7 @@ class SimplifiedPregnancyAndLabour(Module):
         'prob_live_birth': Parameter(Types.REAL, 'Probability that a pregnancy results in a live birth.'),
         'prob_miscarriage': Parameter(Types.REAL, 'Probability that a pregnancy results in a miscarriage.'),
         'prob_stillbirth': Parameter(Types.REAL, 'Probability that a pregnancy results in a stillbirth.'),
-        'prob_abortion': Parameter(Types.REAL, 'Probability that a pregnancy results in an abortion.'),
-        'prob_infant_death': Parameter(Types.REAL, 'Probability that a pregnancy results in infant death.'),
-        'prob_maternal_death':Parameter(Types.REAL, 'Probability that a pregnancy results in maternal death.')
+        'prob_abortion': Parameter(Types.REAL, 'Probability that a pregnancy results in an abortion.')
     }
 
     PROPERTIES = {
@@ -1287,14 +1163,12 @@ class SimplifiedPregnancyAndLabour(Module):
 
     def set_date_of_labour(self, person_id):
         """Schedule the end-of-pregnancy event with a sampled outcome."""
-        outcomes = ['live_birth', 'miscarriage', 'stillbirth', 'abortion', 'infant_death', 'maternal_death']
+        outcomes = ['live_birth', 'miscarriage', 'stillbirth', 'abortion']
         probs = np.array([
             self.parameters['prob_live_birth'],
             self.parameters['prob_miscarriage'],
             self.parameters['prob_stillbirth'],
-            self.parameters['prob_abortion'],
-            self.parameters['prob_infant_death'],
-            self.parameters['prob_maternal_death']
+            self.parameters['prob_abortion']
         ], dtype=float)
         # Normalize probabilities in case they don't sum to 1.
         probs = probs / probs.sum()
@@ -1309,6 +1183,7 @@ class SimplifiedPregnancyAndLabour(Module):
             )
         )
 
+
 class EndOfPregnancyEvent(Event, IndividualScopeEventMixin):
     """Event signaling the end of a pregnancy with multiple possible outcomes."""
 
@@ -1321,43 +1196,12 @@ class EndOfPregnancyEvent(Event, IndividualScopeEventMixin):
         # Log the pregnancy outcome using the module's structured logging method.
         self.module.log_pregnancy_outcome(person_id, self.outcome, self.sim.date)
 
-        # Handle different pregnancy outcomes
         if self.outcome == 'live_birth':
-            self.sim.do_birth(person_id) #initiate properties of the child
-        elif self.outcome == 'maternal_death':
-            # End the pregnancy and handle maternal death
-            self.sim.modules['ContraceptionSlums'].end_pregnancy(person_id)
-            # Mark the mother as deceased
-            self.sim.population.props.at[person_id, 'is_alive'] = False
-            self.sim.population.props.at[person_id, 'date_of_death'] = self.sim.date
-            # # Handle the child if needed
-        elif self.outcome in ['miscarriage', 'stillbirth', 'abortion', 'infant_death']:
-            # For non-maternal death outcomes, end the pregnancy and handle the child
+            self.sim.do_birth(person_id)
+        elif self.outcome in ['miscarriage', 'stillbirth', 'abortion']:
             self.sim.modules['ContraceptionSlums'].end_pregnancy(person_id)
         else:
             raise ValueError(f"Unknown pregnancy outcome: {self.outcome}")
-        
-
-
-
-# class EndOfPregnancyEvent(Event, IndividualScopeEventMixin):
-#     """Event signaling the end of a pregnancy with multiple possible outcomes."""
-
-#     def __init__(self, module, person_id, outcome):
-#         super().__init__(module, person_id=person_id)
-#         self.outcome = outcome
-
-#     def apply(self, person_id):
-#         """End the pregnancy, log the outcome, and perform the appropriate action."""
-#         # Log the pregnancy outcome using the module's structured logging method.
-#         self.module.log_pregnancy_outcome(person_id, self.outcome, self.sim.date)
-
-#         if self.outcome == 'live_birth':
-#             self.sim.do_birth(person_id)
-#         elif self.outcome in ['miscarriage', 'stillbirth', 'abortion', 'infant_death', 'maternal_death']:
-#             self.sim.modules['ContraceptionSlums'].end_pregnancy(person_id)
-#         else:
-#             raise ValueError(f"Unknown pregnancy outcome: {self.outcome}")
 # -----------------------------------------------------------------------------------------------------------
 # -----------------------------------------------------------------------------------------------------------
 #
