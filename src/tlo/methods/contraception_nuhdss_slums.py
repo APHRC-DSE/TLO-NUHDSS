@@ -273,7 +273,7 @@ class ContraceptionSlums(Module):
         sim.schedule_event(ContraceptionPoll(self, run_update_contraceptive=self.run_update_contraceptive), sim.date)
 
         # schedule periodic campaign(to start in 2025)
-        #sim.schedule_event(GradualRolloutCampaignEvent(self), self.parameters['interventions_start_date'])
+        sim.schedule_event(GradualRolloutCampaignEvent(self), self.parameters['interventions_start_date'])
 
         # Retrieve the consumables codes for the consumables used
         if self.use_healthsystem:

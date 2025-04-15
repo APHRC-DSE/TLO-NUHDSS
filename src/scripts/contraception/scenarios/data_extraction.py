@@ -224,7 +224,7 @@ outcome_counts.to_csv(csv_file_path, index=False)
 
 #==============================================outcomes with gradual campaign at cmax= 60%
 
-outcomes_campaign = "outputs/run_analysis_nuhdss__2025-04-08T161904.log"
+outcomes_campaign = "outputs/run_analysis_nuhdss__2025-04-14T100314.log"
 log_outcomes = copy.deepcopy(parse_log_file(outcomes_campaign, level=logging.DEBUG))
 pregnacy_outcome = log_outcomes['tlo.methods.contraception_nuhdss_slums']['pregnancy_outcome'].copy()
     # Convert 'date' column to datetime 
