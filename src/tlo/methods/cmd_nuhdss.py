@@ -2,13 +2,9 @@
 The joint Cardio-Metabolic Disorders model determines onset, outcome and treatment of:
 * Diabetes
 * Hypertension
-* Chronic Kidney Disease
 * Chronic Ischemic Heart Disease
 * Stroke
 * Heart Attack
-
-And:
-* Chronic Lower Back Pain
 """
 from __future__ import annotations
 
@@ -24,7 +20,7 @@ from tlo import DAYS_IN_YEAR, DateOffset, Module, Parameter, Property, Types, lo
 from tlo.events import Event, IndividualScopeEventMixin, PopulationScopeEventMixin, RegularEvent
 from tlo.lm import LinearModel, LinearModelType, Predictor
 from tlo.methods import Metadata
-from tlo.methods import demography as de
+from tlo.methods import demography_nuhdss_slums as de
 from tlo.methods.causes import Cause
 from tlo.methods.dxmanager import DxTest
 from tlo.methods.hsi_event import HSI_Event
@@ -52,15 +48,13 @@ class CardioMetabolicDisorders(Module, GenericFirstAppointmentsMixin):
     # Save a master list of the events that are covered in this module
     conditions = ['diabetes',
                   'hypertension',
-                  'chronic_kidney_disease',
-                  'chronic_lower_back_pain',
                   'chronic_ischemic_hd']
 
     # Save a master list of the events that are covered in this module
     events = ['ever_stroke',
               'ever_heart_attack']
 
-    INIT_DEPENDENCIES = {'Demography', 'Lifestyle', 'HealthSystem', 'SymptomManager'}
+    INIT_DEPENDENCIES = {'DemographySlums', 'Lifestyle', 'HealthSystem', 'SymptomManager'}
 
     OPTIONAL_INIT_DEPENDENCIES = {'HealthBurden', 'Hiv'}
 
@@ -83,9 +77,7 @@ class CardioMetabolicDisorders(Module, GenericFirstAppointmentsMixin):
         'ever_heart_attack': Cause(
             gbd_causes={'Ischemic heart disease', 'Hypertensive heart disease'}, label='Heart Disease'),
         'ever_stroke': Cause(
-            gbd_causes='Stroke', label='Stroke'),
-        'chronic_kidney_disease': Cause(
-            gbd_causes='Chronic kidney disease', label='Kidney Disease')
+            gbd_causes='Stroke', label='Stroke')
     }
 
     # Declare Causes of Disability
@@ -97,12 +89,7 @@ class CardioMetabolicDisorders(Module, GenericFirstAppointmentsMixin):
         'heart_attack': Cause(
             gbd_causes={'Ischemic heart disease', 'Hypertensive heart disease'}, label='Heart Disease'),
         'stroke': Cause(
-            gbd_causes='Stroke', label='Stroke'),
-        'chronic_kidney_disease': Cause(
-            gbd_causes='Chronic kidney disease', label='Kidney Disease'),
-        'lower_back_pain': Cause(
-            gbd_causes={'Low back pain'}, label='Lower Back Pain'
-        )
+            gbd_causes='Stroke', label='Stroke')
     }
 
     # Create separate dicts for params for conditions and events which are read in via excel documents in resources/cmd
@@ -298,7 +285,7 @@ class CardioMetabolicDisorders(Module, GenericFirstAppointmentsMixin):
         p = self.parameters
 
         for condition in self.conditions:
-            p[f'{condition}_onset'] = get_values(cond_onset[condition], 1)
+            p[f'{condition}_onset'] = get_values(cond_onset[condition], 1) # get values from cond_onset and replaces na with 1
             p[f'{condition}_removal'] = get_values(cond_removal[condition], 1)
             p[f'{condition}_death'] = get_values(cond_death[condition], 1)
             p[f'{condition}_initial_prev'] = get_values(cond_prevalence[condition], 0)
@@ -337,18 +324,17 @@ class CardioMetabolicDisorders(Module, GenericFirstAppointmentsMixin):
             else:
                 self.prob_symptoms[event] = {}
 
-        # Register symptoms for conditions and give non-generic symptom 'average' healthcare seeking, except for
-        # chronic lower back pain, which has no healthcare seeking in adults
+        # Register symptoms for conditions and give non-generic symptom 'average' healthcare seeking
         for symptom_name in self.symptoms:
-            if symptom_name == "chronic_lower_back_pain_symptoms":
-                self.sim.modules['SymptomManager'].register_symptom(
-                    Symptom(name=symptom_name,
-                            no_healthcareseeking_in_adults=True)
-                )
-            else:
-                self.sim.modules['SymptomManager'].register_symptom(
-                    Symptom(name=symptom_name,
-                            odds_ratio_health_seeking_in_adults=1.0)
+            # if symptom_name == "chronic_lower_back_pain_symptoms":
+            #     self.sim.modules['SymptomManager'].register_symptom(
+            #         Symptom(name=symptom_name,
+            #                 no_healthcareseeking_in_adults=True)
+            #     )
+            # else:
+            self.sim.modules['SymptomManager'].register_symptom(
+                Symptom(name=symptom_name,
+                        odds_ratio_health_seeking_in_adults=1.0)
                 )
         # Register symptoms from events and make them emergencies
         for event in self.events:
@@ -362,20 +348,20 @@ class CardioMetabolicDisorders(Module, GenericFirstAppointmentsMixin):
         """
         Set property values for the initial population.
         """
-        self.age_cats = self.sim.modules['Demography'].AGE_RANGE_CATEGORIES
+        self.age_cats = self.sim.modules['DemographySlums'].AGE_RANGE_CATEGORIES
         df = population.props
         print("THE DF", df.columns ) # check columns in dataframe
         men = df.is_alive & (df.sex == 'M')
         women = df.is_alive & (df.sex == 'F')
 
-        def sample_eligible(_filter, _p, _condition):
+        def sample_eligible(_filter, _p, _condition): #sample eligible population and for condition
             """uses filter to get eligible population and samples individuals for condition using p"""
             eligible = df.index[_filter]
             init_prev = self.rng.choice([True, False], size=len(eligible), p=[_p, 1 - _p])
-            if sum(init_prev):
+            if sum(init_prev): #sample for condition 
                 df.loc[eligible[init_prev], f'nc_{_condition}'] = True
 
-        def sample_eligible_diagnosis_medication(_filter, _p, _condition):
+        def sample_eligible_diagnosis_medication(_filter, _p, _condition): #eligible for diagnosis and medication
             """uses filter to get eligible population and samples individuals for prior diagnosis & medication use
              using p"""
             eligible = df.index[_filter]
@@ -396,15 +382,19 @@ class CardioMetabolicDisorders(Module, GenericFirstAppointmentsMixin):
 
         for condition in self.conditions:
             p = self.parameters[f'{condition}_initial_prev']
+            print("The inial prevalence is", p)
             # Men & women without condition
             men_wo_cond = men & ~df[f'nc_{condition}']
             women_wo_cond = women & ~df[f'nc_{condition}']
+
+            #assign condition based on prevalence
             for _age_range in self.age_cats:
                 # Select all eligible individuals (men & women w/o condition and in age range)
                 sample_eligible(men_wo_cond & (df.age_range == _age_range), p[f'm_{_age_range}'], condition)
                 sample_eligible(women_wo_cond & (df.age_range == _age_range), p[f'f_{_age_range}'], condition)
 
             # ----- Set variables to false / NaT for everyone
+            #initialize diagnosis and treatment status
             df.loc[df.is_alive, f'nc_{condition}_date_last_test'] = pd.NaT
             df.loc[df.is_alive, f'nc_{condition}_ever_diagnosed'] = False
             df.loc[df.is_alive, f'nc_{condition}_date_diagnosis'] = pd.NaT
@@ -545,19 +535,19 @@ class CardioMetabolicDisorders(Module, GenericFirstAppointmentsMixin):
                 property='nc_hypertension'
             )
         )
-        # Create the diagnostic representing the assessment for whether a person is diagnosed with back pain
-        self.sim.modules['HealthSystem'].dx_manager.register_dx_test(
-            assess_chronic_lower_back_pain=DxTest(
-                property='nc_chronic_lower_back_pain'
-            )
-        )
-        # Create the diagnostic representing the assessment for whether a person is diagnosed with CKD
-        self.sim.modules['HealthSystem'].dx_manager.register_dx_test(
-            assess_chronic_kidney_disease=DxTest(
-                property='nc_chronic_kidney_disease',
-                item_codes=self.parameters['chronic_kidney_disease_hsi']['test_item_code'].astype(int)
-            )
-        )
+        # # Create the diagnostic representing the assessment for whether a person is diagnosed with back pain
+        # self.sim.modules['HealthSystem'].dx_manager.register_dx_test(
+        #     assess_chronic_lower_back_pain=DxTest(
+        #         property='nc_chronic_lower_back_pain'
+        #     )
+        # )
+        # # Create the diagnostic representing the assessment for whether a person is diagnosed with CKD
+        # self.sim.modules['HealthSystem'].dx_manager.register_dx_test(
+        #     assess_chronic_kidney_disease=DxTest(
+        #         property='nc_chronic_kidney_disease',
+        #         item_codes=self.parameters['chronic_kidney_disease_hsi']['test_item_code'].astype(int)
+        #     )
+        # )
         # Create the diagnostic representing the assessment for whether a person is diagnosed with CIHD
         self.sim.modules['HealthSystem'].dx_manager.register_dx_test(
             assess_chronic_ischemic_hd=DxTest(
@@ -1154,12 +1144,12 @@ class CardioMetabolicDisordersDeathEvent(Event, IndividualScopeEventMixin):
         # scheduled date of death
         if f'{self.originating_cause}' in self.module.events:
             if self.sim.date == person[f'nc_{self.originating_cause}_scheduled_date_death']:
-                self.sim.modules['Demography'].do_death(individual_id=person_id,
+                self.sim.modules['DemographySlums'].do_death(individual_id=person_id,
                                                         cause=f'{self.originating_cause}',
                                                         originating_module=self.module)
         else:
             # Conditions have no scheduled date of death, so proceed with death
-            self.sim.modules['Demography'].do_death(individual_id=person_id,
+            self.sim.modules['DemographySlums'].do_death(individual_id=person_id,
                                                     cause=f'{self.originating_cause}',
                                                     originating_module=self.module)
 

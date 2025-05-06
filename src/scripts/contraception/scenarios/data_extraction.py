@@ -18,7 +18,7 @@ outputpath = Path("./outputs")  # folder for convenience of storing outputs
 
 log_file_baseline = "outputs/run_analysis_nuhdss__2025-03-27T083217.log"  
 # --------------------periodic campaigns
-
+#quartely
 # log_file_campaign_80 = "outputs/run_analysis_nuhdss__2025-03-27T074358.log"  
 # log_file_campaign_60 = "outputs/run_analysis_nuhdss__2025-03-27T075826.log"
 # log_file_campaign_40 = "outputs/run_analysis_nuhdss__2025-03-27T085730.log"
@@ -37,17 +37,17 @@ log_file_baseline = "outputs/run_analysis_nuhdss__2025-03-27T083217.log"
 # annual_log_file_campaign_40 = "outputs/run_analysis_nuhdss__2025-03-27T113000.log"
 
 #Biennual
-# biennual_log_file_campaign_40 = "outputs/run_analysis_nuhdss__2025-03-27T141439.log"
-# biennual_log_file_campaign_60 = "outputs/run_analysis_nuhdss__2025-03-27T143549.log"
-# biennual_log_file_campaign_80 = "outputs/run_analysis_nuhdss__2025-03-27T145108.log"
-# biennual_log_file_campaign_100 = "outputs/run_analysis_nuhdss__2025-03-27T150617.log"
+biennual_log_file_campaign_40 = "outputs/run_analysis_nuhdss__2025-03-27T141439.log"
+biennual_log_file_campaign_60 = "outputs/run_analysis_nuhdss__2025-03-27T143549.log"
+biennual_log_file_campaign_80 = "outputs/run_analysis_nuhdss__2025-03-27T145108.log"
+biennual_log_file_campaign_100 = "outputs/run_analysis_nuhdss__2025-03-27T150617.log"
 
 
 #-------------------- gradual campaign
 #annual
-annual_gradual_100 = "outputs/run_analysis_nuhdss__2025-03-27T161217.log"
-annual_gradual_80 = "outputs/run_analysis_nuhdss__2025-03-27T162745.log"
-annual_gradual_60 = "outputs/run_analysis_nuhdss__2025-03-27T163420.log"
+# annual_gradual_100 = "outputs/run_analysis_nuhdss__2025-03-27T161217.log"
+# annual_gradual_80 = "outputs/run_analysis_nuhdss__2025-03-27T162745.log"
+# annual_gradual_60 = "outputs/run_analysis_nuhdss__2025-03-27T163420.log"
 
 #semmiannual
 # semiannual_gradual_100 = "outputs/run_analysis_nuhdss__2025-03-27T165525.log"
@@ -78,17 +78,17 @@ annual_gradual_60 = "outputs/run_analysis_nuhdss__2025-03-27T163420.log"
 
 # Parse log files
 log_baseline = copy.deepcopy(parse_log_file(log_file_baseline, level=logging.DEBUG))
-log_campaign_100 = copy.deepcopy(parse_log_file(annual_gradual_100, level=logging.DEBUG))
-log_campaign_80 = copy.deepcopy(parse_log_file(annual_gradual_80, level=logging.DEBUG))
-log_campaign_60 = copy.deepcopy(parse_log_file(annual_gradual_60, level=logging.DEBUG))
-#log_campaign_40 = copy.deepcopy(parse_log_file(static_40, level=logging.DEBUG))
+log_campaign_100 = copy.deepcopy(parse_log_file(biennual_log_file_campaign_100, level=logging.DEBUG))
+log_campaign_80 = copy.deepcopy(parse_log_file(biennual_log_file_campaign_80, level=logging.DEBUG))
+log_campaign_60 = copy.deepcopy(parse_log_file(biennual_log_file_campaign_60, level=logging.DEBUG))
+log_campaign_40 = copy.deepcopy(parse_log_file(biennual_log_file_campaign_40, level=logging.DEBUG))
 
 
 
 contraception_baseline = log_baseline['tlo.methods.contraception_nuhdss_slums']['contraception_use_summary'].copy()
 contraception_campaign_60 = log_campaign_60['tlo.methods.contraception_nuhdss_slums']['contraception_use_summary'].copy()
 contraception_campaign_80 = log_campaign_80['tlo.methods.contraception_nuhdss_slums']['contraception_use_summary'].copy()
-#contraception_campaign_40 = log_campaign_40['tlo.methods.contraception_nuhdss_slums']['contraception_use_summary'].copy()
+contraception_campaign_40 = log_campaign_40['tlo.methods.contraception_nuhdss_slums']['contraception_use_summary'].copy()
 contraception_campaign_100 = log_campaign_100['tlo.methods.contraception_nuhdss_slums']['contraception_use_summary'].copy()
 
 # Function to process the contraception data
@@ -123,7 +123,7 @@ def process_contraception_data(df, label):
 processed_baseline = process_contraception_data(contraception_baseline, "Baseline")
 processed_campaign_80 = process_contraception_data(contraception_campaign_80, "Campaign 80%")
 processed_campaign_60 = process_contraception_data(contraception_campaign_60, "Campaign 60%")
-#processed_campaign_40 = process_contraception_data(contraception_campaign_40, "Campaign 40%")
+processed_campaign_40 = process_contraception_data(contraception_campaign_40, "Campaign 40%")
 processed_campaign_100 = process_contraception_data(contraception_campaign_100, "Campaign 100%")
 # Combine both datasets
 #
@@ -134,33 +134,48 @@ processed_campaign_100 = process_contraception_data(contraception_campaign_100, 
 
 #combined_mcpr = pd.concat([processed_baseline, processed_campaign_40])
 
-combined_mcpr = pd.concat([processed_baseline,processed_campaign_80,processed_campaign_60,processed_campaign_100])
+combined_mcpr = pd.concat([processed_baseline,processed_campaign_40,processed_campaign_60, processed_campaign_80,processed_campaign_100])
 #print(combined_mcpr)
 #print(combined_mcpr["Scenario"].unique())
 
+palette = {
+    "Baseline": "blue",
+    "Campaign 40%": "darkred",
+    "Campaign 60%": "green",
+    "Campaign 80%": "orange",
+    "Campaign 100%": "purple"
+}
+
+# palette = {
+#     "Baseline": "blue",
+#     "Periodic": "indigo",
+#     "Gradual": "darkgreen",
+#     "Continuous": "darkorange"
+# }
 
 # Plot MCPR for both scenarios
 plt.figure(figsize=(9, 5))
-sns.lineplot(data=combined_mcpr, x="year", y="mcpr", hue="Scenario", marker="o", linewidth=1, alpha=0.7)
 
+# Add the palette here
+sns.lineplot(data=combined_mcpr, x="year", y="mcpr", hue="Scenario", 
+             marker="o", linewidth=1, alpha=0.7, palette=palette)
+
+# Confidence intervals with matching colors
 plt.fill_between(processed_baseline["year"], processed_baseline["ci_lower"], processed_baseline["ci_upper"], alpha=0.2, color="blue")
+plt.fill_between(processed_campaign_40["year"], processed_campaign_40["ci_lower"], processed_campaign_40["ci_upper"], alpha=0.2, color="darkred")
 plt.fill_between(processed_campaign_80["year"], processed_campaign_80["ci_lower"], processed_campaign_80["ci_upper"], alpha=0.2, color="orange")
 plt.fill_between(processed_campaign_60["year"], processed_campaign_60["ci_lower"], processed_campaign_60["ci_upper"], alpha=0.2, color="green")
-#plt.fill_between(processed_campaign_40["year"], processed_campaign_40["ci_lower"], processed_campaign_40["ci_upper"], alpha=0.2, color="teal")
 plt.fill_between(processed_campaign_100["year"], processed_campaign_100["ci_lower"], processed_campaign_100["ci_upper"], alpha=0.2, color="purple")
 
-# Bold title and labels
-plt.title("MCPR Over Time for Campaigns", fontsize=14, fontweight="bold")
+# Labels and formatting
 plt.xlabel("Year", fontsize=12, fontweight="bold")
 plt.ylabel("MCPR (%)", fontsize=12, fontweight="bold")
-
 plt.ylim(0, 100)
 plt.xticks(np.arange(2010, 2041, 3), fontsize=10, fontweight="bold")
 plt.yticks(np.arange(0, 100, 10), fontsize=10, fontweight="bold")
-
 plt.grid(True, linestyle="--", alpha=0.4)
 plt.legend(title="Scenario", title_fontsize=12, fontsize=10)
-
+plt.title("")
 plt.show()
 
 #--------------------------------------- yearly data ------------------------------------------------
@@ -191,7 +206,8 @@ yearly_data.to_csv(csv_file_path, index=False)
  
 #----------------------------------------- outcomes of pregancies --------------------------------------
 
-outcome_baseline = "outputs/run_analysis_nuhdss__2025-04-03T104941.log"
+#outcome_baseline = "outputs/run_analysis_nuhdss__2025-04-03T104941.log"
+outcome_baseline = "outputs/run_analysis_nuhdss__2025-04-15T124245.log"
 log_outcomes = copy.deepcopy(parse_log_file(outcome_baseline, level=logging.DEBUG))
 pregnacy_outcome = log_outcomes['tlo.methods.contraception_nuhdss_slums']['pregnancy_outcome'].copy()
     # Convert 'date' column to datetime 
@@ -205,7 +221,7 @@ outcome_counts = outcome_counts.reset_index()
 print("Pregnancy outcome data", outcome_counts )
 
       # Define the full path for the CSV file
-csv_file_path = outputpath / 'yearly_pregnacy_outcomes_baseline.csv'
+csv_file_path = outputpath / 'yearly_pregnacy_outcomes_baseline2.csv'
 
     # Save the DataFrame to the CSV file
 outcome_counts.to_csv(csv_file_path, index=False)
