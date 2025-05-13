@@ -261,20 +261,20 @@ class CardioMetabolicDisorders(Module, GenericFirstAppointmentsMixin):
             ResourceFile_cmd_events_hsi  = HSI parameters for events
 
         """
-        cmd_path = Path(self.resourcefilepath) / "cmd"
-        cond_onset = read_csv_files(cmd_path / "ResourceFile_cmd_condition_onset", files=None)
-        cond_removal = read_csv_files(cmd_path / "ResourceFile_cmd_condition_removal", files=None)
-        cond_death = read_csv_files(cmd_path / "ResourceFile_cmd_condition_death", files=None)
-        cond_prevalence = read_csv_files(cmd_path / "ResourceFile_cmd_condition_prevalence", files=None)
-        cond_symptoms = read_csv_files(cmd_path / "ResourceFile_cmd_condition_symptoms", files=None)
-        cond_hsi = read_csv_files(cmd_path / "ResourceFile_cmd_condition_hsi", files=None)
-        cond_testing = read_csv_files(cmd_path / "ResourceFile_cmd_condition_testing", files=None)
-        events_onset = read_csv_files(cmd_path / "ResourceFile_cmd_events", files=None)
-        events_death = read_csv_files(cmd_path / "ResourceFile_cmd_events_death", files=None)
-        events_symptoms = read_csv_files(cmd_path / "ResourceFile_cmd_events_symptoms", files=None)
-        events_hsi = read_csv_files(cmd_path / "ResourceFile_cmd_events_hsi", files=None)
+        cmd_path = Path(self.resourcefilepath) / "cmd_nuhdss"
+        cond_onset = read_csv_files(cmd_path / "ResourceFile_cmd_nuhdss_condition_onset", files=None) #done for hypertension and diabetes
+        cond_removal = read_csv_files(cmd_path / "ResourceFile_cmd_nuhdss_condition_removal", files=None) #done for hypertension and diabetes
+        cond_death = read_csv_files(cmd_path / "ResourceFile_cmd_nuhdss_condition_death", files=None) #done with hypertension
+        cond_prevalence = read_csv_files(cmd_path / "ResourceFile_cmd_nuhdss_condition_prevalence", files=None)#done with hypertension and diabetes
+        cond_symptoms = read_csv_files(cmd_path / "ResourceFile_cmd_nuhdss_condition_symptoms", files=None) #blank for hypertension, to figure out what it representa fro diabetes
+        cond_hsi = read_csv_files(cmd_path / "ResourceFile_cmd_nuhdss_condition_hsi", files=None) #check where used
+        cond_testing = read_csv_files(cmd_path / "ResourceFile_cmd_nuhdss_condition_testing", files=None) #check where used
+        events_onset = read_csv_files(cmd_path / "ResourceFile_cmd_nuhdss_events", files=None)#done for hypertesion and diabetes
+        events_death = read_csv_files(cmd_path / "ResourceFile_cmd_nuhdss_events_death", files=None) # not yet found
+        events_symptoms = read_csv_files(cmd_path / "ResourceFile_cmd_nuhdss_events_symptoms", files=None) #done for both diabetes and hypertension
+        events_hsi = read_csv_files(cmd_path / "ResourceFile_cmd_nuhdss_events_hsi", files=None) #use what is already there
 
-        self.load_parameters_from_dataframe(pd.read_csv(cmd_path / "ResourceFile_cmd_parameters.csv"))
+        self.load_parameters_from_dataframe(pd.read_csv(cmd_path / "ResourceFile_cmd_parameters.csv")) #done
 
         def get_values(params, value):
             """replaces nans in the 'value' key with specified value"""
@@ -548,6 +548,7 @@ class CardioMetabolicDisorders(Module, GenericFirstAppointmentsMixin):
         #         item_codes=self.parameters['chronic_kidney_disease_hsi']['test_item_code'].astype(int)
         #     )
         # )
+        
         # Create the diagnostic representing the assessment for whether a person is diagnosed with CIHD
         self.sim.modules['HealthSystem'].dx_manager.register_dx_test(
             assess_chronic_ischemic_hd=DxTest(
@@ -767,15 +768,15 @@ class CardioMetabolicDisorders(Module, GenericFirstAppointmentsMixin):
             self.sim.modules['SymptomManager'].who_has('diabetes_symptoms')] = self.daly_wts[
             'daly_diabetes_complicated']
 
-        # Chronic Lower Back Pain: give those who have symptoms moderate weight
-        dw['lower_back_pain'].loc[
-            self.sim.modules['SymptomManager'].who_has('chronic_lower_back_pain_symptoms')] = self.daly_wts[
-            'daly_chronic_lower_back_pain']
+        # # Chronic Lower Back Pain: give those who have symptoms moderate weight
+        # dw['lower_back_pain'].loc[
+        #     self.sim.modules['SymptomManager'].who_has('chronic_lower_back_pain_symptoms')] = self.daly_wts[
+        #     'daly_chronic_lower_back_pain']
 
-        # Chronic Kidney Disease: give those who have symptoms moderate weight
-        dw['chronic_kidney_disease'].loc[
-            self.sim.modules['SymptomManager'].who_has('chronic_kidney_disease_symptoms')] = self.daly_wts[
-            'daly_chronic_kidney_disease_moderate']
+        # # Chronic Kidney Disease: give those who have symptoms moderate weight
+        # dw['chronic_kidney_disease'].loc[
+        #     self.sim.modules['SymptomManager'].who_has('chronic_kidney_disease_symptoms')] = self.daly_wts[
+        #     'daly_chronic_kidney_disease_moderate']
 
         # Stroke: give everyone moderate long-term consequences daly weight
         dw['stroke'].loc[df.nc_ever_stroke] = self.daly_wts['daly_stroke']
@@ -1194,12 +1195,12 @@ class CardioMetabolicDisorders_LoggingEvent(RegularEvent, PopulationScopeEventMi
         self.repeat = 12
         super().__init__(module, frequency=DateOffset(months=self.repeat))
         self.date_last_run = self.sim.date
-        self.AGE_RANGE_LOOKUP = self.sim.modules['Demography'].AGE_RANGE_LOOKUP
+        self.AGE_RANGE_LOOKUP = self.sim.modules['DemographySlums'].AGE_RANGE_LOOKUP
         assert isinstance(module, CardioMetabolicDisorders)
 
     def apply(self, population):
         # Create shortcut to the Demography module
-        demog_module = self.sim.modules['Demography']
+        demog_module = self.sim.modules['DemographySlums']
 
         # Log counts in the trackers
         logger.info(key='incidence_count_by_condition',
@@ -1220,8 +1221,8 @@ class CardioMetabolicDisorders_LoggingEvent(RegularEvent, PopulationScopeEventMi
             self.module.trackers[_tracker].reset()
 
         def age_cats(ages_in_years):
-            AGE_RANGE_CATEGORIES = self.sim.modules['Demography'].AGE_RANGE_CATEGORIES
-            AGE_RANGE_LOOKUP = self.sim.modules['Demography'].AGE_RANGE_LOOKUP
+            AGE_RANGE_CATEGORIES = self.sim.modules['DemographySlums'].AGE_RANGE_CATEGORIES
+            AGE_RANGE_LOOKUP = self.sim.modules['DemographySlums'].AGE_RANGE_LOOKUP
 
             _age_cats = pd.Series(
                 pd.Categorical(ages_in_years.map(AGE_RANGE_LOOKUP),
@@ -1515,7 +1516,7 @@ class HSI_CardioMetabolicDisorders_Investigations(HSI_Event, IndividualScopeEven
 
         # Do test and trigger treatment (if necessary) for each condition:
         if set(self.conditions_to_investigate).intersection(
-            ['diabetes', 'chronic_kidney_disease', 'chronic_ischemic_hd']
+            ['diabetes', 'chronic_ischemic_hd']
         ):
             self.add_equipment({'Analyser, Haematology', 'Analyser, Combined Chemistry and Electrolytes'})
 

@@ -233,7 +233,6 @@ data_con.to_csv(csv_file_path, index=False)
 print(f"Daily contraception data has been saved to {csv_file_path}")
 
 
- 
 # #----------------------------------------- outcomes of pregancies --------------------------------------
 #log_outcomes = copy.deepcopy(parse_log_file(outcome_baseline, level=logging.DEBUG))
 pregnacy_outcome = log_outcomes['tlo.methods.contraception_nuhdss_slums']['pregnancy_outcome'].copy()

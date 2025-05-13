@@ -9,7 +9,7 @@ from tlo import Date, Simulation
 from tlo.analysis.utils import compare_number_of_deaths, parse_log_file
 from tlo.methods import (
     cardio_metabolic_disorders,
-    demography,
+    demography_nuhdss_slums,
     depression,
     enhanced_lifestyle,
     healthburden,
@@ -30,13 +30,13 @@ def runsim(seed=0):
     # add file handler for the purpose of logging
 
     start_date = Date(2010, 1, 1)
-    end_date = Date(2019, 12, 31)
+    end_date = Date(2015, 12, 31)
     popsize = 1000
 
     sim = Simulation(start_date=start_date, seed=0, log_config=log_config, show_progress_bar=True)
 
     # run the simulation
-    sim.register(demography.Demography(resourcefilepath=resourcefilepath),
+    sim.register(demography_nuhdss_slums.DemographySlums(resourcefilepath=resourcefilepath),
                  enhanced_lifestyle.Lifestyle(resourcefilepath=resourcefilepath),
                  healthsystem.HealthSystem(resourcefilepath=resourcefilepath, disable=False,
                                            cons_availability='all'),
