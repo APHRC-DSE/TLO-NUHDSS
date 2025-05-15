@@ -351,8 +351,8 @@ class CardioMetabolicDisorders(Module, GenericFirstAppointmentsMixin):
         self.age_cats = self.sim.modules['DemographySlums'].AGE_RANGE_CATEGORIES
         df = population.props
         print("THE DF", df.columns ) # check columns in dataframe
-        men = df.is_alive & (df.sex == 'M')
-        women = df.is_alive & (df.sex == 'F')
+        men = df.is_alive & (df.sex == 'M') &df.age_years.between(40, 70)
+        women = df.is_alive & (df.sex == 'F') & df.age_years.between(40, 70)
 
         def sample_eligible(_filter, _p, _condition): #sample eligible population and for condition
             """uses filter to get eligible population and samples individuals for condition using p"""
@@ -598,28 +598,12 @@ class CardioMetabolicDisorders(Module, GenericFirstAppointmentsMixin):
                 conditions_are_mutually_exclusive=True,
                 conditions_are_exhaustive=True
             )
-            .when('.between(0, 4)', p['rr_0_4'])
-            .when('.between(5, 9)', p['rr_5_9'])
-            .when('.between(10, 14)', p['rr_10_14'])
-            .when('.between(15, 19)', p['rr_15_19'])
-            .when('.between(20, 24)', p['rr_20_24'])
-            .when('.between(25, 29)', p['rr_25_29'])
-            .when('.between(30, 34)', p['rr_30_34'])
-            .when('.between(35, 39)', p['rr_35_39'])
             .when('.between(40, 44)', p['rr_40_44'])
             .when('.between(45, 49)', p['rr_45_49'])
             .when('.between(50, 54)', p['rr_50_54'])
             .when('.between(55, 59)', p['rr_55_59'])
             .when('.between(60, 64)', p['rr_60_64'])
-            .when('.between(65, 69)', p['rr_65_69'])
-            .when('.between(70, 74)', p['rr_70_74'])
-            .when('.between(75, 79)', p['rr_75_79'])
-            .when('.between(80, 84)', p['rr_80_84'])
-            .when('.between(85, 89)', p['rr_85_89'])
-            .when('.between(90, 94)', p['rr_90_94'])
-            .when('.between(95, 99)', p['rr_95_99'])
-            .when('>= 100', p['rr_100']),
-            Predictor('li_urban').when(True, p['rr_urban']),
+            .when('.between(65, 69)', p['rr_65_70']),
             Predictor(
                 'li_wealth',
                 conditions_are_mutually_exclusive=True,
@@ -669,17 +653,11 @@ class CardioMetabolicDisorders(Module, GenericFirstAppointmentsMixin):
             Predictor('nc_diabetes').when(True, p['rr_diabetes']),
             Predictor('nc_hypertension').when(True, p['rr_hypertension']),
             Predictor('de_depr').when(True, p['rr_depression']),
-            Predictor('nc_chronic_kidney_disease').when(True, p['rr_chronic_kidney_disease']),
-            Predictor('nc_chronic_lower_back_pain').when(True, p['rr_chronic_lower_back_pain']),
             Predictor('nc_chronic_ischemic_hd').when(True, p['rr_chronic_ischemic_heart_disease']),
             Predictor('nc_ever_stroke').when(True, p['rr_ever_stroke']),
             Predictor('nc_ever_heart_attack').when(True, p['rr_ever_heart_attack']),
             Predictor('nc_diabetes_on_medication').when(True, p['rr_diabetes_on_medication']),
             Predictor('nc_hypertension_on_medication').when(True, p['rr_hypertension_on_medication']),
-            Predictor('nc_chronic_lower_back_pain_on_medication').when(True, p[
-                'rr_chronic_lower_back_pain_on_medication']),
-            Predictor('nc_chronic_kidney_disease_on_medication').when(True, p[
-                'rr_chronic_kidney_disease_on_medication']),
             Predictor('nc_chronic_ischemic_hd_on_medication').when(True, p[
                 'rr_chronic_ischemic_heart_disease_on_medication']),
             Predictor('nc_ever_stroke_on_medication').when(True, p['rr_stroke_on_medication']),

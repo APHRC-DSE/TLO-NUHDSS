@@ -196,7 +196,7 @@ sns.lineplot(data=combined_mcpr, x="year", y="mcpr", hue="Scenario",
 # plt.show()
  
 # #----------------------------------------- population data ---------------------------------- 
-outcome_baseline = "outputs/run_analysis_nuhdss__2025-04-11T091452.log"
+outcome_baseline = "outputs/run_simulation_nuhdss__2025-05-14T135924.log"
 log_outcomes = copy.deepcopy(parse_log_file(outcome_baseline, level=logging.DEBUG))
 pop_df = log_outcomes['tlo.methods.contraception_nuhdss_slums']['sex_distribution_summary'].copy()
 print(pop_df)

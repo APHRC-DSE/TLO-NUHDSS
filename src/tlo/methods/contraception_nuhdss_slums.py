@@ -129,6 +129,12 @@ class ContraceptionSlums(Module):
         ),
          'prob_contra_partner': Parameter(
             Types.REAL, "Probability of using contraception when with partner"
+        ),
+          'has_partner_prob': Parameter(
+            Types.REAL, "Probability  that a woman have a partner"
+        ),
+          'no_partner_prob': Parameter(
+            Types.REAL, "Probability that a woman does not have a partner"
         )
     }
 
@@ -150,6 +156,9 @@ class ContraceptionSlums(Module):
     PROPERTIES = {
         'co_contraception': Property(Types.CATEGORICAL, 'Current contraceptive method',
                                      categories=sorted(all_contraception_states)),
+        'co_decision_maker': Property(Types.CATEGORICAL, 'Decision maker on contraceptives uptake',
+                                     categories=['woman', 'spouse', 'joint']), 
+        'co_has_partner': Property(Types.BOOL, 'Whether this individual has partner'),
         'is_pregnant': Property(Types.BOOL, 'Whether this individual is currently pregnant'),
         'date_of_last_pregnancy': Property(Types.DATE, 'Date that the most recent or current pregnancy began.'),
         'co_unintended_preg': Property(Types.BOOL, 'Whether the most recent or current pregnancy was unintended.'),
@@ -238,6 +247,51 @@ class ContraceptionSlums(Module):
         """Process parameters before initialising population and simulation"""
         self.processed_params = self.process_params()
 
+    def assign_contraception_with_partner(self, df, eligible_index):
+            """
+            Assign contraception method for females with partners using linear model uptake probabilities.
+        
+             Parameters:
+         - df: DataFrame of the population
+         - eligible_index: index of females 15-49 with partners
+        
+            Modifies df in-place, assigning 'co_decision_maker' and 'co_contraception' for eligible individuals.
+        """
+        # Sample decision maker for those with partners
+            decision_maker_choices = ['woman', 'spouse', 'joint']
+            sampled_dm = self.rng.choice(
+                decision_maker_choices,
+                size=len(eligible_index),
+                p=[self.parameters['woman_decision'], self.parameters['spouse_decision'], self.parameters['joint_decision']]
+            )
+            df.loc[eligible_index, 'co_decision_maker'] = sampled_dm
+
+            # Define linear model for uptake probability
+            lm_uptake = LinearModel(
+                LinearModelType.MULTIPLICATIVE,
+                self.parameters['prob_contra_partner'],
+                Predictor("co_decision_maker", conditions_are_mutually_exclusive=True, conditions_are_exhaustive=True)
+                    .when("woman", self.parameters['woman_decision'])
+                    .when("spouse", self.parameters['spouse_decision'])
+                    .when("joint", self.parameters['joint_decision'])
+            )
+
+            # Predict uptake probabilities
+            uptake_probs = lm_uptake.predict(df.loc[eligible_index])
+
+            # Get ages for those with partners and baseline probabilities by age
+            ages = df.loc[eligible_index, 'age_years'].astype(int)
+            p_method = self.processed_params['initial_method_use'].loc[ages.values].reset_index(drop=True)
+
+            # Scale baseline probabilities by uptake probabilities (element-wise multiply)
+            scaled_probs = p_method.multiply(uptake_probs.reset_index(drop=True), axis=0)
+            scaled_probs = scaled_probs.div(scaled_probs.sum(axis=1), axis=0)
+            print('SCALED PROBABILITIES',scaled_probs )
+            # Sample contraception method using scaled probabilities
+            df.loc[eligible_index, 'co_contraception'] = [
+                self.rng.choice(scaled_probs.columns, p=row) for _, row in scaled_probs.iterrows()
+            ]
+
     def initialise_population(self, population):
         """Set initial values for properties"""
 
@@ -249,24 +303,55 @@ class ContraceptionSlums(Module):
         df.loc[df.is_alive, 'co_unintended_preg'] = False
         df.loc[df.is_alive, 'co_date_of_last_fp_appt'] = pd.NaT
 
-         # Always assign or reassign 'has_partner'
-        partner_probs = [0.49395, 0.50605]  # [True, False]
-        df['has_partner'] = self.rng.choice([True, False], size=len(df), p=partner_probs)
+        # Always assign or reassign 'has_partner'
+        #partner_probs = [0.49395, 0.50605]  # [True, False]
+        df['co_has_partner'] = self.rng.choice([True, False], size=len(df), p=[self.parameters['has_partner_prob'], self.parameters['no_partner_prob']])
 
         # Initialize 'decision_maker' column
-        df['decision_maker'] = np.nan
-        # 2) Assign contraception method
-        # Select females aged 15-49 from population, for current year
+        df['co_decision_maker'] = pd.NA
+    #=============== assign contraception method fro those and without partners===================
         
+        # Select females aged 15-49 from population, for current year
         p_method = self.processed_params['initial_method_use']
         females1549 = df.is_alive & (df.sex == 'F') & df.age_years.between(15, 49)
-       
+
+        # Subset indices for those with and without partners
+        with_partner_idx = df.index[females1549 & df['co_has_partner']]
+        without_partner_idx = df.index[females1549 & ~df['co_has_partner']]
+
+        # Assign contraception for those with partners using linear model function
+        self.assign_contraception_with_partner(df, with_partner_idx)
+
+        # For those without partners, assign contraception directly from baseline probabilities
+        ages_no_partner = df.loc[without_partner_idx, 'age_years'].astype(int)
+        df.loc[without_partner_idx, 'co_contraception'] = [
+            self.rng.choice(p_method.columns, p=p_method.loc[age]) for age in ages_no_partner
+        ]
+
+        # # Then continue with appointment date assignment as before
+        # needs_appts = females1549 & df['co_contraception'].isin(self.states_that_may_require_HSI_to_maintain_on)
+        # states_to_maintain_on = sorted(self.states_that_may_require_HSI_to_maintain_on)
+        # df.loc[needs_appts, 'co_date_of_last_fp_appt'] = df.loc[needs_appts, 'co_contraception'].astype('string').apply(
+        #     lambda _co_contraception: random_date(
+        #         self.sim.date - pd.DateOffset(
+        #             days=self.parameters['days_between_appts_for_maintenance'][states_to_maintain_on.index(_co_contraception)]
+        #         ),
+        #         self.sim.date - pd.DateOffset(days=1),
+        #         self.rng
+        #     )
+        # )
 
 
-        
-        df.loc[females1549, 'co_contraception'] = df.loc[females1549, 'age_years'].apply(
-           lambda _age_years: self.rng.choice(p_method.columns, p=p_method.loc[_age_years])
-        )
+
+
+
+        # 2) Assign contraception method
+        # Select females aged 15-49 from population, for current year
+        # p_method = self.processed_params['initial_method_use']
+        # females1549 = df.is_alive & (df.sex == 'F') & df.age_years.between(15, 49)
+        # df.loc[females1549, 'co_contraception'] = df.loc[females1549, 'age_years'].apply(
+        #    lambda _age_years: self.rng.choice(p_method.columns, p=p_method.loc[_age_years])
+        # )
 
         # 3) Give a notional date on which the last appointment occurred for those that need them
         needs_appts = females1549 & df['co_contraception'].isin(self.states_that_may_require_HSI_to_maintain_on)
@@ -296,7 +381,7 @@ class ContraceptionSlums(Module):
 
         # schedule periodic campaign(to start in 2025)
         #sim.schedule_event(DecisionMakingEvent(self), self.parameters['interventions_start_date'])
-        sim.schedule_event(DecisionMakingEvent(self),sim.date)
+        #sim.schedule_event(DecisionMakingEvent(self),self.parameters['interventions_start_date'])
 
         # Retrieve the consumables codes for the consumables used
         if self.use_healthsystem:
@@ -335,6 +420,8 @@ class ContraceptionSlums(Module):
             # Initialise child's properties:
         new_properties = {
                 'co_contraception': 'not_using',
+                'co_has_partner': False,
+                'co_decision_maker': pd.NA,
                 'is_pregnant': False,
                 'date_of_last_pregnancy': pd.NaT,
                 'co_unintended_preg': False,
@@ -1094,98 +1181,70 @@ class PeriodicCampaignEvent(RegularEvent, PopulationScopeEventMixin):
                                                                     )
 
 
-class DecisionMakingEvent(RegularEvent, PopulationScopeEventMixin):
-    def __init__(self, module):
-        super().__init__(module, frequency=DateOffset(months=1))
-        self.param = self.module.parameters
+# class DecisionMakingEvent(RegularEvent, PopulationScopeEventMixin):
+#     def __init__(self, module):
+#         super().__init__(module, frequency=DateOffset(months=1))
+#         self.param = self.module.parameters
 
-    def apply(self, population):
-        df = population.props
-        p = self.param
+#     def apply(self, population):
+#         df = population.props
 
-        # Ensure has_partner is boolean
-        df['has_partner'] = df['has_partner'].astype(bool)
+#         # Select eligible women WITH partners
+#         eligible = (
+#             df['is_alive'] &
+#             (df['sex'] == 'F') &
+#             df['age_years'].between(15, 49) &
+#             (df['co_contraception'] == 'not_using') &
+#             ~df['is_pregnant'] &
+#             df['co_has_partner']
+#         )
+#         eligible_index = df.index[eligible]
 
-        # Eligible females
-        eligible = (
-            df['is_alive'] &
-            (df['sex'] == 'F') &
-            df['age_years'].between(15, 49) &
-            (df['co_contraception'] == 'not_using') &
-            ~df['is_pregnant']
-        )
+#         if eligible_index.empty:
+#             return
 
-        eligible_index = df.index[eligible]
-        df.loc[eligible_index, 'decision_maker'] = np.nan  
+#         # Sample decision maker
+#         decision_maker_choices = ['woman', 'spouse', 'joint']
+#         sampled_dm = self.module.rng.choice(
+#             decision_maker_choices,
+#             size=len(eligible_index),
+#             p=[self.param['woman_decision'], self.param['spouse_decision'], self.param['joint_decision']]
+#         )
+#         df.loc[eligible_index, 'co_decision_maker'] = sampled_dm
 
-        # === For females WITH partners ===
-        with_partner = eligible & df['has_partner']
-        with_partner_index = df.index[with_partner]
+#         # Linear model for uptake probability based on decision maker
+#         lm_uptake = LinearModel(
+#             LinearModelType.ADDITIVE,
+#             self.param['prob_contra_partner'],
+#             Predictor("co_decision_maker", conditions_are_mutually_exclusive=True, conditions_are_exhaustive=True)
+#             .when("woman", self.param['woman_decision'])
+#             .when("spouse", self.param['spouse_decision'])
+#             .when("joint", self.param['joint_decision'])
+#         )
+#         uptake_probs = lm_uptake.predict(df.loc[eligible_index])
+#         #print("LINEAR OUTPUTS",uptake_probs)
+#         ages = df.loc[eligible_index, 'age_years'].astype(int) #get ages of those with partners
+#                 # initiation initially used
+#         base_probs = self.module.processed_params['initial_method_use'].loc[ages.values].reset_index(drop=True)
+#                 #print("BASELINE PROBS",base_probs)
+#         scaled_probs = base_probs.multiply(uptake_probs.reset_index(drop=True), axis=0)
+#                 #print("SCALED PROBABILITIES",scaled_probs )
+#         scaled_probs.index = eligible_index
 
-        if not with_partner_index.empty:
-            # Assign decision maker for females with partners
-            decision_maker_choices = ['woman', 'spouse', 'joint']
-            decision_maker_probs = [0.2972, 0.0308, 0.672]
-            sampled_dm = self.module.rng.choice(
-                decision_maker_choices,
-                size=len(with_partner_index),
-                p=decision_maker_probs
-            )
-            df.loc[with_partner_index, 'decision_maker'] = sampled_dm
+#                 # Sample contraceptive methods
+#         assigned_methods = scaled_probs.apply(
+#                     lambda row: self.module.rng.choice(row.index, p=row / row.sum()), axis=1
+#                 )
+#         selected_idx = assigned_methods[assigned_methods != 'not_using'].index #index of those using contraceptives
 
-            # Linear model to adjust contraceptive uptake for females with partners
-            lm_uptake = LinearModel(
-                LinearModelType.MULTIPLICATIVE,
-                p['prob_contra_partner'],
-                Predictor("decision_maker", conditions_are_mutually_exclusive=True, conditions_are_exhaustive=True)
-                .when("woman", p['woman_decision'])
-                .when("spouse", p['spouse_decision'])
-                .when("joint", p['joint_decision'])
-            )
-            uptake_probs = lm_uptake.predict(df.loc[with_partner_index])
-            ages = df.loc[with_partner_index, 'age_years'].astype(int)
-
-            base_probs = self.module.processed_params['initial_method_use'].loc[ages.values].reset_index(drop=True)
-            scaled_probs = base_probs.multiply(uptake_probs.reset_index(drop=True), axis=0)
-            scaled_probs.index = with_partner_index
-
-            # Sample contraceptive methods
-            assigned_methods = scaled_probs.apply(
-                lambda row: self.module.rng.choice(row.index, p=row / row.sum()), axis=1
-            )
-            selected_idx = assigned_methods[assigned_methods != 'not_using'].index
-
-            # Update df with assigned method
-            df.loc[selected_idx, 'co_contraception'] = assigned_methods[selected_idx]
-
-            # Schedule contraceptive changes
-            for idx in selected_idx:
-                self.module.schedule_batch_of_contraceptive_changes(
-                    ids=[idx], old=['not_using'], new=[assigned_methods[idx]]
-                )
-
-        # === For females WITHOUT partners ===
-        without_partner = eligible & (~df['has_partner'])
-        without_partner_index = df.index[without_partner]
-
-        if not without_partner_index.empty:
-            p_method = self.module.processed_params['initial_method_use'].copy()
-            p_method['not_using'] = p_method.apply(lambda row: row['not_using'] + (1 - row.sum()), axis=1)
-
-            assigned_methods = df.loc[without_partner_index, 'age_years'].astype(int).apply(
-                lambda age: self.module.rng.choice(p_method.columns, p=p_method.loc[age])
-            )
-            selected_idx = assigned_methods[assigned_methods != 'not_using'].index
-
-            # Update df with assigned method
-            df.loc[selected_idx, 'co_contraception'] = assigned_methods[selected_idx]
-
-            # Schedule contraceptive changes
-            for idx in selected_idx:
-                self.module.schedule_batch_of_contraceptive_changes(
-                    ids=[idx], old=['not_using'], new=[assigned_methods[idx]]
-                )     
-        
+#                 # Update df with assigned method
+#         df.loc[selected_idx, 'co_contraception'] = assigned_methods[selected_idx]
+#                 #print("assignes methods for those with partners", df.loc[selected_idx, 'co_contraception'])
+#                 # Schedule contraceptive changes
+#         for idx in selected_idx:
+#             self.module.schedule_batch_of_contraceptive_changes(
+#                 ids=[idx], old=['not_using'], new=[assigned_methods[idx]]
+#             )
 
     
 class GradualRolloutCampaignEvent(RegularEvent, PopulationScopeEventMixin):
@@ -1289,10 +1348,10 @@ class ContraceptionLoggingEvent(RegularEvent, PopulationScopeEventMixin):
             data=df.loc[df.is_alive, 'sex'].value_counts().to_dict(),
             description='Counts of alive individuals by sex at a point in time.')
 
-       
+       #Total number of women in union  using contraception
         logger.info(key='contraception_use_summary',
                     data=df.loc[
-                        df.is_alive & (df.sex == 'F') & df.age_years.between(15, 49), 'co_contraception'
+                        df.is_alive & (df.sex == 'F') & df.co_has_partner &df.age_years.between(15, 49), 'co_contraception'
                     ].value_counts().sort_index().to_dict(),
                     description='Counts of women on each type of contraceptive at a point in time.')
 
@@ -1305,14 +1364,37 @@ class ContraceptionLoggingEvent(RegularEvent, PopulationScopeEventMixin):
                     ),
                     description='Counts of women, by age-range, on each type of contraceptive at a point in time.')
 
-          # Log summary of usage of contraceptives (with decision maker breakdown)
-        contraception_by_decision_maker = df.loc[
-            df.is_alive & (df.sex == 'F') & df.has_partner & df.age_years.between(15, 49)
-        ].groupby(by=['co_contraception', 'decision_maker']).size().sort_index()
-        
-        logger.info(key='contraception_use_summary_by_decision_maker',
-                    data=flatten_multi_index_series_into_dict_for_logging(contraception_by_decision_maker),
-                    description='Counts of women, by decision maker, on each type of contraceptive at a point in time.')
+        #log decision makers among women in union using contraception
+        all_index = pd.MultiIndex.from_product(
+            [
+                ['IUD', 'implant', 'injections', 'male_condom', 'not_using','other_modern','other_traditional', 'pill', 'rhythm' ],
+                ['joint', 'spouse', 'woman']
+            ],
+            names=['co_contraception', 'co_decision_maker']
+        )
+
+        contraception_by_decision_maker = (
+            df[df['co_contraception'].isin(['IUD', 'implant', 'injections', 'male_condom', 'not_using','other_modern','other_traditional', 'pill', 'rhythm' ])]
+            .groupby(['co_contraception', 'co_decision_maker'])
+            .size()
+            .reindex(all_index, fill_value=0)
+        )
+
+        logger.info(
+            key='contraception_use_summary_by_decision_maker',
+            data=flatten_multi_index_series_into_dict_for_logging(contraception_by_decision_maker),
+            description='Counts of women, by decision maker, on each type of contraceptive at a point in time.'
+        )
+
+        #  # Log summary of usage of contraceptives (with decision maker breakdown)
+        # contraception_by_decision_maker = df.loc[
+        #     df.is_alive & (df.sex == 'F') & df.co_has_partner & df.age_years.between(15, 49)
+        # ].groupby(by=['co_contraception', 'co_decision_maker']).size().sort_index()
+        # #print(contraception_by_decision_maker.head(10))
+        # print(contraception_by_decision_maker.index)
+        # logger.info(key='contraception_use_summary_by_decision_maker',
+        #             data=flatten_multi_index_series_into_dict_for_logging(contraception_by_decision_maker),
+        #             description='Counts of women, by decision maker, on each type of contraceptive at a point in time.')
 
 
 class StartInterventions(Event, PopulationScopeEventMixin):
