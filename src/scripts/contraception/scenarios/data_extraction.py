@@ -196,29 +196,29 @@ sns.lineplot(data=combined_mcpr, x="year", y="mcpr", hue="Scenario",
 # plt.show()
  
 # #----------------------------------------- population data ---------------------------------- 
-outcome_baseline = "outputs/run_simulation_nuhdss__2025-05-14T135924.log"
+outcome_baseline = "outputs/run_simulation_nuhdss__2025-05-22T124634.log"
 log_outcomes = copy.deepcopy(parse_log_file(outcome_baseline, level=logging.DEBUG))
-pop_df = log_outcomes['tlo.methods.contraception_nuhdss_slums']['sex_distribution_summary'].copy()
-print(pop_df)
-pop_df['date'] = pd.to_datetime(pop_df['date'])
-    # Extract year from the date column
-pop_df['year'] = pop_df['date'].dt.year
-    # Exclude datetime columns
+# pop_df = log_outcomes['tlo.methods.contraception_nuhdss_slums']['sex_distribution_summary'].copy()
+# print(pop_df)
+# pop_df['date'] = pd.to_datetime(pop_df['date'])
+#     # Extract year from the date column
+# pop_df['year'] = pop_df['date'].dt.year
+#     # Exclude datetime columns
     
-    # Get last entry for each year
-yearly_data = pop_df.sort_values('date').groupby('year').last().reset_index()
+#     # Get last entry for each year
+# yearly_data = pop_df.sort_values('date').groupby('year').last().reset_index()
 
-    # Compute total population
-yearly_data['Total'] = yearly_data['F'] + yearly_data['M']
+#     # Compute total population
+# yearly_data['Total'] = yearly_data['F'] + yearly_data['M']
 
-    # Print yearly population data
-    #print("Yearly Population Data:\n", yearly_data[['year', 'F', 'M', 'Total']])
-csv_file_path = outputpath / 'yearly_data.csv'
+#     # Print yearly population data
+#     #print("Yearly Population Data:\n", yearly_data[['year', 'F', 'M', 'Total']])
+# csv_file_path = outputpath / 'yearly_data.csv'
 
-    # Save the DataFrame to the CSV file
-yearly_data.to_csv(csv_file_path, index=False)
+#     # Save the DataFrame to the CSV file
+# yearly_data.to_csv(csv_file_path, index=False)
 
-print(f"Yearly population data has been saved to {csv_file_path}")
+# print(f"Yearly population data has been saved to {csv_file_path}")
 
 #======================== Daily contraception data ===================================================
 co_sum_df = log_outcomes['tlo.methods.contraception_nuhdss_slums']['contraception_use_summary'].copy()
