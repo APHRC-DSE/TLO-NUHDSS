@@ -52,7 +52,7 @@ branch_name = 'co_final'
 # - Without interv
 #datestamp_without_log = '2025-02-04T123913'
 # 2K till 2099, final costs update EHP & OHT + pregn test to initiate co: '2023-04-26T141435' from 2023-04-26T141159Z
-datestamp_without_log = '2025-03-17T095437'
+datestamp_without_log = '2025-03-24T165239'
 # 250K till 2050; final costs update EHP & OHT + rebased on master + pregn test corrected: '2023-05-06T170512'
 #    from 2023-05-06T170253Z
 # # - With interv
@@ -68,14 +68,14 @@ logFile_without = 'run_analysis_nuhdss__' + datestamp_without_log + '.log'
 # %%%% plots up to the year 2050 (regarding of how long are the simulations)
 # TODO: have the last year included in figs as input parameter?
 # %% Plot Contraception Use Over time?
-plot_use_time_bool = True
+plot_use_time_bool = False
 #plot_use_time_bool = True
 # %% Plot Contraception Use By Method Over time?
-plot_use_time_method_bool = True
+plot_use_time_method_bool = False
 #plot_use_time_method_bool = True
 # %% Plot Pregnancies Over time?
 # plot_pregnancies_bool = False
-plot_pregnancies_bool = True
+plot_pregnancies_bool = False
 # %% Plot Dependency Ratio Over time?
 plot_depend_ratio_bool = False
 #plot_depend_ratio_bool = True

@@ -39,7 +39,7 @@ def runsim(seed=0):
 
     start_date = Date(2010, 1, 1)
     end_date = Date(2019, 12, 31)
-    popsize = 500000
+    popsize = 1000
 
     sim = Simulation(start_date=start_date, seed=0, log_config=log_config, show_progress_bar=True)
 
